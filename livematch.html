@@ -25,7 +25,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
@@ -42,7 +42,6 @@
     const db = getFirestore(app);
     const matchesContainer = document.getElementById("matchesContainer");
 
-    // We'll keep a cache of matches and their participants so we can restore cards on cancel
     let matchesCache = {};
 
     onAuthStateChanged(auth, user => {
@@ -64,7 +63,7 @@
         }
 
         let cardsHtml = "";
-        matchesCache = {}; // clear cache
+        matchesCache = {};
 
         for (const docSnap of snapshot.docs) {
           const match = docSnap.data();
@@ -76,7 +75,6 @@
             ...p.data()
           }));
 
-          // Save in cache
           matchesCache[id] = { match, participants };
 
           cardsHtml += createCardHTML(id, match, participants);
@@ -84,7 +82,6 @@
 
         matchesContainer.innerHTML = cardsHtml;
 
-        // Attach winner button listeners
         const winButtons = document.querySelectorAll(".win-button");
         winButtons.forEach(button => {
           button.addEventListener("click", declareWinner);
@@ -141,21 +138,18 @@
 
         <div class="mt-4 flex justify-end space-x-3">
           <button onclick="editMatch('${id}')" class="text-blue-600 hover:underline flex items-center gap-1"><i class="fas fa-edit"></i> Edit</button>
-          <button onclick="deleteMatch('${id}')" class="text-red-600 hover:underline flex items-center gap-1"><i class="fas fa-trash"></i> Delete</button>
+          <button onclick="finishMatch('${id}')" class="text-purple-600 hover:underline flex items-center gap-1"><i class="fas fa-flag-checkered"></i> Finished Match</button>
         </div>
       </div>
       `;
     }
 
     window.editMatch = function (id) {
-      // Get cached data
       const cached = matchesCache[id];
       if (!cached) return alert("Match data not found for edit.");
 
-      const { match, participants } = cached;
-
+      const { match } = cached;
       const card = document.getElementById(`card-${id}`);
-
       const localISO = new Date(match.dateTime).toISOString().slice(0,16);
 
       card.innerHTML = `
@@ -178,7 +172,6 @@
     };
 
     window.cancelEdit = function (id) {
-      // Restore original card HTML from cache
       const cached = matchesCache[id];
       if (!cached) return alert("Match data not found for cancel.");
 
@@ -187,7 +180,6 @@
 
       card.innerHTML = createCardHTML(id, match, participants);
 
-      // Re-attach event listeners for winner buttons
       const buttons = card.querySelectorAll(".win-button");
       buttons.forEach(button => {
         button.addEventListener("click", declareWinner);
@@ -214,14 +206,13 @@
       }
     };
 
-    window.deleteMatch = async function (id) {
-      if (!confirm("Are you sure you want to delete this match?")) return;
+    window.finishMatch = async function (id) {
       try {
-        await deleteDoc(doc(db, "matches", id));
-        alert("Match deleted.");
+        await updateDoc(doc(db, "matches", id), { status: "finished" });
+        alert("Match marked as finished.");
         await loadMatches();
       } catch (error) {
-        alert("Failed to delete match: " + error.message);
+        alert("Failed to mark match as finished: " + error.message);
         console.error(error);
       }
     };
@@ -243,7 +234,6 @@
         const totalPrice = matchData.totalPrice || 0;
         if (totalPrice <= 0) throw new Error("Invalid totalPrice");
 
-        // Update winner user's balance
         const userDocRef = doc(db, "users", winnerUid);
         await updateDoc(userDocRef, {
           balance: increment(totalPrice)
