@@ -6,26 +6,27 @@
   <title>Finished Matches</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-6">
+<body class="bg-gray-100 min-h-screen p-4 flex flex-col">
 
   <header class="mb-6 flex justify-between items-center">
-    <h1 class="text-2xl font-bold text-gray-800">Finished Matches</h1>
-    <a href="live_matches.html" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+    <h1 class="text-2xl font-bold">Finished Matches</h1>
+    <a href="live-matches.html" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
       Back to Live Matches
     </a>
   </header>
 
-  <main>
+  <main class="flex-grow">
     <div id="finishedContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <p class="text-center col-span-full text-gray-500">Loading finished matches...</p>
+      <p class="col-span-full text-center text-gray-500">Loading finished matches...</p>
     </div>
   </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // তোমার Firebase config নিচে বসাও
+    // Firebase config তোমার প্রজেক্ট অনুযায়ী ঠিকঠাক বসাও
     const firebaseConfig = {
       apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
       authDomain: "dlstournament-31ac1.firebaseapp.com",
@@ -37,16 +38,28 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
+
     const finishedContainer = document.getElementById("finishedContainer");
+
+    // ইউজার লগইন না থাকলে login.html এ পাঠাবে
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        window.location.href = "login.html";
+      } else {
+        loadFinishedMatches();
+      }
+    });
 
     async function loadFinishedMatches() {
       try {
-        const matchesQuery = query(collection(db, "matches"), where("finished", "==", true));
-        const snapshot = await getDocs(matchesQuery);
+        // finished == true ম্যাচগুলো নিয়ে আসা
+        const q = query(collection(db, "matches"), where("finished", "==", true));
+        const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-          finishedContainer.innerHTML = `<p class="text-center col-span-full text-gray-500">No finished matches found.</p>`;
+          finishedContainer.innerHTML = `<p class="col-span-full text-center text-gray-500">No finished matches found.</p>`;
           return;
         }
 
@@ -54,11 +67,12 @@
         snapshot.forEach(docSnap => {
           const match = docSnap.data();
           html += `
-            <div class="bg-white rounded shadow p-4 border border-gray-300">
+            <div class="bg-white p-5 rounded shadow border">
               <h2 class="font-semibold text-lg mb-2">${match.title || "Untitled Match"}</h2>
-              <p><strong>Date & Time:</strong> ${match.dateTime ? new Date(match.dateTime).toLocaleString() : "N/A"}</p>
+              <p><strong>Date & Time:</strong> ${new Date(match.dateTime).toLocaleString()}</p>
               <p><strong>Total Prize:</strong> ৳${match.totalPrice || 0}</p>
               <p><strong>Entry Fee:</strong> ৳${match.entryFee || 0}</p>
+              <p><strong>Per Goal:</strong> ৳${match.perGoal || 0}</p>
               <p><strong>Slot Limit:</strong> ${match.slotLimit || 0}</p>
             </div>
           `;
@@ -67,12 +81,10 @@
         finishedContainer.innerHTML = html;
 
       } catch (error) {
-        finishedContainer.innerHTML = `<p class="text-red-600 text-center col-span-full">${error.message}</p>`;
-        console.error("Error loading finished matches:", error);
+        finishedContainer.innerHTML = `<p class="col-span-full text-center text-red-600">Error loading matches: ${error.message}</p>`;
+        console.error("Firestore fetch error:", error);
       }
     }
-
-    loadFinishedMatches();
   </script>
 </body>
 </html>
