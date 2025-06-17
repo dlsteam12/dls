@@ -108,8 +108,8 @@
           const match = docSnap.data();
           const matchId = docSnap.id;
 
-          // ✅ Filter finished matches
-          if (match.status === "finished") return;
+          // Updated filtering condition: show match only if finished is false (or missing means assume true, so skip)
+          if (match.finished !== false) return;
 
           const matchDate = match.dateTime?.toDate?.() || new Date(match.dateTime);
           const formattedDate = matchDate.toLocaleString().replace(/GMT.*/, "").trim();
