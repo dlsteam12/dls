@@ -24,7 +24,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     // Firebase config তোমার প্রজেক্ট অনুযায়ী ঠিকঠাক বসাও
     const firebaseConfig = {
@@ -54,19 +54,23 @@
 
     async function loadFinishedMatches() {
       try {
-        // finished == true ম্যাচগুলো নিয়ে আসা
-        const q = query(collection(db, "matches"), where("finished", "==", true));
+        // আগের মতো সব ম্যাচ নিয়ে আসবে, filter দিলে সেই অনুযায়ী চেঞ্জ করবে
+        const q = query(collection(db, "matches"));
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-          finishedContainer.innerHTML = `<p class="col-span-full text-center text-gray-500">No finished matches found.</p>`;
+          finishedContainer.innerHTML = `<p class="col-span-full text-center text-gray-500">No matches found.</p>`;
           return;
         }
 
         let html = "";
         snapshot.forEach(docSnap => {
           const match = docSnap.data();
-          const statusText = match.status ? match.status : "Finished"; // fallback if no status field
+
+          // এখানে finished এর মান অনুযায়ী status দেখাবে
+          // finished === true হলে "Finished", না হলে "Live"
+          const statusText = match.finished === true ? "Finished" : "Live";
+
           html += `
             <div class="bg-white p-5 rounded shadow border">
               <h2 class="font-semibold text-lg mb-2">${match.title || "Untitled Match"}</h2>
