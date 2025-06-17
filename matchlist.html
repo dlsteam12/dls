@@ -25,7 +25,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc, collectionGroup, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
@@ -42,6 +42,9 @@
     const db = getFirestore(app);
     const matchesContainer = document.getElementById("matchesContainer");
 
+    // We'll keep a cache of matches and their participants so we can restore cards on cancel
+    let matchesCache = {};
+
     onAuthStateChanged(auth, user => {
       if (!user) {
         window.location.href = "login.html";
@@ -52,7 +55,6 @@
 
     async function loadMatches() {
       try {
-        // Load matches ordered by dateTime ascending
         const q = query(collection(db, "matches"), orderBy("dateTime", "asc"));
         const snapshot = await getDocs(q);
 
@@ -62,24 +64,27 @@
         }
 
         let cardsHtml = "";
+        matchesCache = {}; // clear cache
 
         for (const docSnap of snapshot.docs) {
           const match = docSnap.data();
           const id = docSnap.id;
 
-          // Load participants of this match (subcollection "participants")
           const participantsSnapshot = await getDocs(collection(db, "matches", id, "participants"));
           const participants = participantsSnapshot.docs.map(p => ({
             uid: p.id,
             ...p.data()
           }));
 
+          // Save in cache
+          matchesCache[id] = { match, participants };
+
           cardsHtml += createCardHTML(id, match, participants);
         }
 
         matchesContainer.innerHTML = cardsHtml;
 
-        // Attach winner button event listeners after rendering
+        // Attach winner button listeners
         const winButtons = document.querySelectorAll(".win-button");
         winButtons.forEach(button => {
           button.addEventListener("click", declareWinner);
@@ -92,7 +97,6 @@
     }
 
     function createCardHTML(id, match, participants) {
-      // We expect participants array length to be max 2 (team1 and team2)
       const team1 = participants[0] || { teamName: "Team A", uid: "N/A" };
       const team2 = participants[1] || { teamName: "Team B", uid: "N/A" };
 
@@ -143,6 +147,85 @@
       `;
     }
 
+    window.editMatch = function (id) {
+      // Get cached data
+      const cached = matchesCache[id];
+      if (!cached) return alert("Match data not found for edit.");
+
+      const { match, participants } = cached;
+
+      const card = document.getElementById(`card-${id}`);
+
+      const localISO = new Date(match.dateTime).toISOString().slice(0,16);
+
+      card.innerHTML = `
+        <div class="flex flex-col space-y-3">
+          <input type="text" id="edit-title-${id}" class="border rounded p-2" value="${match.title || ""}" placeholder="Title" />
+          <label class="block">
+            Date & Time:
+            <input type="datetime-local" id="edit-dateTime-${id}" class="border rounded p-2 w-full" value="${localISO}" />
+          </label>
+          <input type="number" id="edit-totalPrice-${id}" class="border rounded p-2" value="${match.totalPrice || 0}" placeholder="Total Price (৳)" />
+          <input type="number" id="edit-perGoal-${id}" class="border rounded p-2" value="${match.perGoal || 0}" placeholder="Per Goal (৳)" />
+          <input type="number" id="edit-entryFee-${id}" class="border rounded p-2" value="${match.entryFee || 0}" placeholder="Entry Fee (৳)" />
+          <input type="number" id="edit-slotLimit-${id}" class="border rounded p-2" value="${match.slotLimit || 0}" placeholder="Slot Limit" />
+        </div>
+        <div class="mt-4 flex justify-end space-x-3">
+          <button onclick="saveMatch('${id}')" class="text-green-600 hover:underline flex items-center gap-1"><i class="fas fa-save"></i> Save</button>
+          <button onclick="cancelEdit('${id}')" class="text-gray-600 hover:underline flex items-center gap-1"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      `;
+    };
+
+    window.cancelEdit = function (id) {
+      // Restore original card HTML from cache
+      const cached = matchesCache[id];
+      if (!cached) return alert("Match data not found for cancel.");
+
+      const { match, participants } = cached;
+      const card = document.getElementById(`card-${id}`);
+
+      card.innerHTML = createCardHTML(id, match, participants);
+
+      // Re-attach event listeners for winner buttons
+      const buttons = card.querySelectorAll(".win-button");
+      buttons.forEach(button => {
+        button.addEventListener("click", declareWinner);
+      });
+    };
+
+    window.saveMatch = async function (id) {
+      const updatedData = {
+        title: document.getElementById(`edit-title-${id}`).value.trim(),
+        dateTime: new Date(document.getElementById(`edit-dateTime-${id}`).value).toISOString(),
+        totalPrice: parseFloat(document.getElementById(`edit-totalPrice-${id}`).value),
+        perGoal: parseFloat(document.getElementById(`edit-perGoal-${id}`).value),
+        entryFee: parseFloat(document.getElementById(`edit-entryFee-${id}`).value),
+        slotLimit: parseInt(document.getElementById(`edit-slotLimit-${id}`).value, 10) || 0
+      };
+
+      try {
+        await updateDoc(doc(db, "matches", id), updatedData);
+        alert("Match updated successfully.");
+        await loadMatches();
+      } catch (error) {
+        alert("Update failed: " + error.message);
+        console.error(error);
+      }
+    };
+
+    window.deleteMatch = async function (id) {
+      if (!confirm("Are you sure you want to delete this match?")) return;
+      try {
+        await deleteDoc(doc(db, "matches", id));
+        alert("Match deleted.");
+        await loadMatches();
+      } catch (error) {
+        alert("Failed to delete match: " + error.message);
+        console.error(error);
+      }
+    };
+
     async function declareWinner(e) {
       const btn = e.currentTarget;
       btn.disabled = true;
@@ -152,14 +235,7 @@
       const winnerUid = btn.dataset.uid;
 
       try {
-        // Load match document (to get totalPrice)
         const matchDocRef = doc(db, "matches", matchId);
-        const matchSnap = await getDocs(query(collection(db, "matches"), orderBy("dateTime")));
-        // Alternatively:
-        // const matchSnap = await getDoc(matchDocRef);
-
-        // But better:
-        const { getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
         const snap = await getDoc(matchDocRef);
         if (!snap.exists()) throw new Error("Match not found");
 
@@ -167,13 +243,12 @@
         const totalPrice = matchData.totalPrice || 0;
         if (totalPrice <= 0) throw new Error("Invalid totalPrice");
 
-        // Update winner user's balance by incrementing totalPrice
+        // Update winner user's balance
         const userDocRef = doc(db, "users", winnerUid);
         await updateDoc(userDocRef, {
           balance: increment(totalPrice)
         });
 
-        // Update UI status
         const statusDiv = document.getElementById(`status-${matchId}`);
         statusDiv.textContent = `Successfully added ৳${totalPrice} to user ${winnerUid} (winner).`;
         statusDiv.classList.remove("text-red-500");
@@ -182,7 +257,6 @@
         btn.textContent = "Winner Declared ✔️";
         btn.disabled = true;
 
-        // Disable other buttons of this match
         document.querySelectorAll(`.win-button[data-matchid="${matchId}"]`).forEach(otherBtn => {
           if (otherBtn !== btn) {
             otherBtn.disabled = true;
@@ -203,69 +277,6 @@
         console.error("Error declaring winner:", error);
       }
     }
-
-    window.editMatch = function (id) {
-      const card = document.getElementById(`card-${id}`);
-      const title = document.getElementById(`title-${id}`).innerText;
-      const dateTimeText = document.getElementById(`dateTime-${id}`).innerText;
-      const dateTime = new Date(dateTimeText);
-      const localISO = dateTime.toISOString().slice(0,16);
-      const totalPrice = document.getElementById(`totalPrice-${id}`).innerText;
-      const perGoal = document.getElementById(`perGoal-${id}`).innerText;
-      const entryFee = document.getElementById(`entryFee-${id}`).innerText;
-      const slotLimit = document.getElementById(`slotLimit-${id}`).innerText;
-
-      card.innerHTML = `
-        <div class="flex flex-col space-y-3">
-          <input type="text" id="edit-title-${id}" class="border rounded p-2" value="${title}" placeholder="Title" />
-          <label class="block">
-            Date & Time:
-            <input type="datetime-local" id="edit-dateTime-${id}" class="border rounded p-2 w-full" value="${localISO}" />
-          </label>
-          <input type="number" id="edit-totalPrice-${id}" class="border rounded p-2" value="${totalPrice}" placeholder="Total Price (৳)" />
-          <input type="number" id="edit-perGoal-${id}" class="border rounded p-2" value="${perGoal}" placeholder="Per Goal (৳)" />
-          <input type="number" id="edit-entryFee-${id}" class="border rounded p-2" value="${entryFee}" placeholder="Entry Fee (৳)" />
-          <input type="number" id="edit-slotLimit-${id}" class="border rounded p-2" value="${slotLimit}" placeholder="Slot Limit" />
-        </div>
-        <div class="mt-4 flex justify-end space-x-3">
-          <button onclick="saveMatch('${id}')" class="text-green-600 hover:underline flex items-center gap-1"><i class="fas fa-save"></i> Save</button>
-          <button onclick="loadMatches()" class="text-gray-600 hover:underline flex items-center gap-1"><i class="fas fa-times"></i> Cancel</button>
-        </div>
-      `;
-    };
-
-    window.saveMatch = async function (id) {
-      const updatedData = {
-        title: document.getElementById(`edit-title-${id}`).value.trim(),
-        dateTime: new Date(document.getElementById(`edit-dateTime-${id}`).value).toISOString(),
-        totalPrice: parseFloat(document.getElementById(`edit-totalPrice-${id}`).value),
-        perGoal: parseFloat(document.getElementById(`edit-perGoal-${id}`).value),
-        entryFee: parseFloat(document.getElementById(`edit-entryFee-${id}`).value),
-        slotLimit: parseInt(document.getElementById(`edit-slotLimit-${id}`).value, 10) || 0
-      };
-
-      try {
-        await updateDoc(doc(db, "matches", id), updatedData);
-        alert("Match updated successfully.");
-        loadMatches();
-      } catch (error) {
-        alert("Update failed: " + error.message);
-        console.error(error);
-      }
-    };
-
-    window.deleteMatch = async function (id) {
-      if (!confirm("Are you sure you want to delete this match?")) return;
-      try {
-        await deleteDoc(doc(db, "matches", id));
-        alert("Match deleted.");
-        loadMatches();
-      } catch (error) {
-        alert("Failed to delete match: " + error.message);
-        console.error(error);
-      }
-    };
-
   </script>
 </body>
 </html>
