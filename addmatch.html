@@ -82,6 +82,16 @@
       }
     });
 
+    // Function to generate a 6-letter random uppercase word (e.g., AHHSSJ)
+    function generateMatchCode() {
+      const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      let code = "";
+      for (let i = 0; i < 6; i++) {
+        code += letters.charAt(Math.floor(Math.random() * letters.length));
+      }
+      return code;
+    }
+
     addMatchForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
@@ -97,6 +107,8 @@
         return;
       }
 
+      const matchCode = generateMatchCode();
+
       try {
         await addDoc(collection(db, "matches"), {
           title,
@@ -105,10 +117,11 @@
           perGoal,
           entryFee,
           slotLimit,
-          finished: false,     // Newly added
-          status: "live",      // Newly added
+          finished: false,
+          status: "live",
+          matchCode, // 6-letter match code
         });
-        alert("✅ Match added successfully!");
+        alert(`✅ Match added successfully!\nMatch Code: ${matchCode}`);
         addMatchForm.reset();
       } catch (error) {
         console.error("Error adding match:", error);
