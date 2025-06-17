@@ -69,7 +69,6 @@
           const match = docSnap.data();
           const id = docSnap.id;
 
-          // শুধু unfinished ম্যাচ দেখাবে
           if (match.finished === true) continue;
 
           const participantsSnapshot = await getDocs(collection(db, "matches", id, "participants"));
@@ -84,7 +83,6 @@
 
         matchesContainer.innerHTML = cardsHtml;
 
-        // বিজয়ী ঘোষণা বাটনে ইভেন্ট লিসেনার লাগানো
         const winButtons = document.querySelectorAll(".win-button");
         winButtons.forEach(button => {
           button.addEventListener("click", declareWinner);
@@ -103,7 +101,8 @@
       return `
       <div id="card-${id}" class="bg-white rounded shadow p-5 flex flex-col justify-between border border-gray-200">
         <div>
-          <h2 id="title-${id}" class="text-lg font-semibold mb-2">${match.title || ""}</h2>
+          <h2 id="title-${id}" class="text-lg font-semibold mb-1">${match.title || ""}</h2>
+          <p class="text-xs text-gray-500 mb-2">Match Code: <span class="font-semibold text-blue-600">${match.matchCode || "N/A"}</span></p>
           <p><strong>Date & Time:</strong> <span id="dateTime-${id}">${new Date(match.dateTime).toLocaleString()}</span></p>
           <p><strong>Total Price (৳):</strong> <span id="totalPrice-${id}">${match.totalPrice || 0}</span></p>
           <p><strong>Per Goal (৳):</strong> <span id="perGoal-${id}">${match.perGoal || 0}</span></p>
@@ -161,7 +160,6 @@
       }
     };
 
-    // Declare Winner Function
     async function declareWinner(e) {
       const btn = e.currentTarget;
       btn.disabled = true;
@@ -192,7 +190,6 @@
         btn.textContent = "Winner Declared ✔️";
         btn.disabled = true;
 
-        // অন্য বিজয়ীর বাটন disable করা
         document.querySelectorAll(`.win-button[data-matchid="${matchId}"]`).forEach(otherBtn => {
           if (otherBtn !== btn) {
             otherBtn.disabled = true;
@@ -214,7 +211,6 @@
       }
     }
 
-    // Edit match ফাংশন প্লেসহোল্ডার (তুমি নিজের মতো ইমপ্লিমেন্ট করবে)
     window.editMatch = function (id) {
       alert("Edit match functionality not implemented yet. Match ID: " + id);
     };
