@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Matches List with Status Update</title>
+  <title>Finished Matches</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
   <header class="bg-blue-700 text-white p-4 flex justify-between items-center sticky top-0 z-30">
-    <h1 class="text-xl font-bold">Matches List</h1>
+    <h1 class="text-xl font-bold">Finished Matches</h1>
     <a href="admin.html" class="bg-white text-blue-700 px-4 py-2 rounded hover:bg-gray-200 transition">
       Back to Admin Panel
     </a>
   </header>
 
   <main class="p-4 md:p-6 flex-grow">
-    <div id="matchesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <p class="col-span-full text-center text-gray-500">Loading matches...</p>
+    <div id="finishedContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <p class="col-span-full text-center text-gray-500">Loading finished matches...</p>
     </div>
   </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, query, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     // Firebase config
     const firebaseConfig = {
@@ -41,23 +41,24 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const matchesContainer = document.getElementById("matchesContainer");
+    const finishedContainer = document.getElementById("finishedContainer");
 
     onAuthStateChanged(auth, user => {
       if (!user) {
         window.location.href = "login.html";
       } else {
-        loadMatches();
+        loadFinishedMatches();
       }
     });
 
-    async function loadMatches() {
+    async function loadFinishedMatches() {
       try {
-        const q = query(collection(db, "matches"));
+        // শুধুমাত্র finished === true ম্যাচগুলো নিয়ে আসা
+        const q = query(collection(db, "matches"), where("finished", "==", true));
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-          matchesContainer.innerHTML = `<p class="col-span-full text-center text-gray-500">No matches found.</p>`;
+          finishedContainer.innerHTML = `<p class="col-span-full text-center text-gray-500">No finished matches found.</p>`;
           return;
         }
 
@@ -65,10 +66,9 @@
         snapshot.forEach(docSnap => {
           const match = docSnap.data();
           const id = docSnap.id;
-          const statusText = match.finished === true ? "Finished" : "Live";
 
           html += `
-            <div class="bg-white p-5 rounded shadow border flex flex-col justify-between">
+            <div id="match-${id}" class="bg-white p-5 rounded shadow border flex flex-col justify-between">
               <div>
                 <h2 class="font-semibold text-lg mb-2">${match.title || "Untitled Match"}</h2>
                 <p><strong>Date & Time:</strong> ${new Date(match.dateTime).toLocaleString()}</p>
@@ -76,13 +76,13 @@
                 <p><strong>Entry Fee:</strong> ৳${match.entryFee || 0}</p>
                 <p><strong>Per Goal:</strong> ৳${match.perGoal || 0}</p>
                 <p><strong>Slot Limit:</strong> ${match.slotLimit || 0}</p>
-                <p><strong>Current Status:</strong> <span id="status-${id}" class="capitalize font-semibold">${statusText}</span></p>
+                <p><strong>Status:</strong> <span id="status-${id}" class="capitalize font-semibold">Finished</span></p>
               </div>
 
               <form data-id="${id}" class="mt-4 flex items-center gap-2" onsubmit="event.preventDefault(); updateStatus('${id}', this.statusSelect.value);">
                 <select name="statusSelect" class="border rounded px-2 py-1" >
-                  <option value="false" ${!match.finished ? "selected" : ""}>Live</option>
-                  <option value="true" ${match.finished ? "selected" : ""}>Finished</option>
+                  <option value="false">Live</option>
+                  <option value="true" selected>Finished</option>
                 </select>
                 <button type="submit" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition">
                   Update Status
@@ -92,34 +92,33 @@
           `;
         });
 
-        matchesContainer.innerHTML = html;
+        finishedContainer.innerHTML = html;
       } catch (error) {
-        matchesContainer.innerHTML = `<p class="col-span-full text-center text-red-600">Error loading matches: ${error.message}</p>`;
+        finishedContainer.innerHTML = `<p class="col-span-full text-center text-red-600">Error loading matches: ${error.message}</p>`;
         console.error("Firestore fetch error:", error);
       }
     }
 
-    // Update finished field in Firestore according to select status
     async function updateStatus(matchId, statusValue) {
       try {
-        // Explicitly convert "true"/"false" string to boolean true/false
-        let finishedBool = false;
-        if (statusValue === "true") {
-          finishedBool = true;
-        } else if (statusValue === "false") {
-          finishedBool = false;
-        } else {
-          // Default to false if unknown value
-          finishedBool = false;
-        }
+        let finishedBool = statusValue === "true";
 
         const matchRef = doc(db, "matches", matchId);
         await updateDoc(matchRef, { finished: finishedBool });
 
-        // Update UI status text immediately
-        const statusSpan = document.getElementById(`status-${matchId}`);
-        if (statusSpan) {
-          statusSpan.textContent = finishedBool ? "Finished" : "Live";
+        if (finishedBool) {
+          // যদি finished হয়, মানে Finished, তাহলে UI-তে status আপডেট করো
+          const statusSpan = document.getElementById(`status-${matchId}`);
+          if (statusSpan) {
+            statusSpan.textContent = "Finished";
+          }
+        } else {
+          // যদি finished false হয়, মানে Live হয়েছে, তাহলে UI থেকে ঐ ম্যাচ div টি রিমুভ করো কারণ
+          // এই পেজে Live ম্যাচ দেখানো হবেনা
+          const matchDiv = document.getElementById(`match-${matchId}`);
+          if (matchDiv) {
+            matchDiv.remove();
+          }
         }
 
         alert("Status updated successfully!");
