@@ -128,22 +128,20 @@
   <p class="text-gray-300 text-sm">Per Goal: ৳${match.perGoal || 'N/A'}</p>
   <p class="text-gray-300 text-sm">Entry Fee: ৳${match.entryFee || 'N/A'}</p>
 
-  <!-- Flex container for progress bar and button -->
+  <!-- Flex row for progress bar and join/full button -->
   <div class="flex items-center gap-4 mt-2">
-    <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+    <div class="flex-1 bg-gray-700 rounded-full h-2 overflow-hidden">
       <div class="${progressColor} h-full transition-all duration-300" style="width: ${(fillRatio * 100).toFixed(1)}%"></div>
     </div>
-    <span class="text-sm text-gray-300 font-semibold whitespace-nowrap">${slot} / ${slotLimit}</span>
-  </div>
-
-  <!-- Join or Full button -->
-  <div class="mt-2">
     ${
       isFull
-        ? `<button disabled class="w-full bg-gray-700 text-white font-semibold py-1.5 px-4 rounded cursor-not-allowed">Match Full</button>`
-        : `<button onclick="showTeamInput('${matchId}', ${slot}, ${slotLimit}, ${match.entryFee || 0})" class="w-full bg-yellow-400 text-black font-semibold py-1.5 px-4 rounded hover:bg-yellow-300 transition">Join</button>`
+        ? `<button disabled class="bg-gray-700 text-white font-semibold py-1.5 px-4 rounded cursor-not-allowed whitespace-nowrap">Match Full</button>`
+        : `<button onclick="showTeamInput('${matchId}', ${slot}, ${slotLimit}, ${match.entryFee || 0})" class="bg-yellow-400 text-black font-semibold py-1.5 px-4 rounded hover:bg-yellow-300 transition whitespace-nowrap">Join</button>`
     }
   </div>
+
+  <!-- Slot Info -->
+  <p class="text-sm mt-1 text-gray-300 font-semibold">Slot: ${slot} / ${slotLimit}</p>
 
   <!-- Participants button -->
   <div class="mt-2">
