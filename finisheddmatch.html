@@ -99,16 +99,16 @@
       }
     }
 
-    // ফাংশন যা status আপডেট করে Firestore এ এবং UI রিফ্রেশ করে
+    // Update finished field in Firestore according to select status
     async function updateStatus(matchId, statusValue) {
       try {
-        // statusValue string হিসেবে আসে, তাই boolean এ convert করছি
+        // statusValue string, convert to boolean: "true" → true, "false" → false
         const finishedBool = statusValue === "true";
 
         const matchRef = doc(db, "matches", matchId);
         await updateDoc(matchRef, { finished: finishedBool });
 
-        // UI-তে status আপডেট
+        // Update UI status text immediately
         const statusSpan = document.getElementById(`status-${matchId}`);
         if (statusSpan) {
           statusSpan.textContent = finishedBool ? "Finished" : "Live";
@@ -121,7 +121,6 @@
       }
     }
 
-    // window এ expose করলাম যেন inline onsubmit এ পাওয়া যায়
     window.updateStatus = updateStatus;
 
   </script>
