@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Finished Matches</title>
+  <title>Matches List with Status Update</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
@@ -16,17 +16,17 @@
   </header>
 
   <main class="p-4 md:p-6 flex-grow">
-    <div id="finishedContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <p class="col-span-full text-center text-gray-500">Loading finished matches...</p>
+    <div id="matchesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <p class="col-span-full text-center text-gray-500">Loading matches...</p>
     </div>
   </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, query, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // Firebase config তোমার প্রজেক্ট অনুযায়ী ঠিকঠাক বসাও
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
       authDomain: "dlstournament-31ac1.firebaseapp.com",
@@ -41,56 +41,89 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const finishedContainer = document.getElementById("finishedContainer");
+    const matchesContainer = document.getElementById("matchesContainer");
 
-    // ইউজার লগইন না থাকলে login.html এ পাঠাবে
     onAuthStateChanged(auth, user => {
       if (!user) {
         window.location.href = "login.html";
       } else {
-        loadFinishedMatches();
+        loadMatches();
       }
     });
 
-    async function loadFinishedMatches() {
+    async function loadMatches() {
       try {
-        // আগের মতো সব ম্যাচ নিয়ে আসবে, filter দিলে সেই অনুযায়ী চেঞ্জ করবে
         const q = query(collection(db, "matches"));
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-          finishedContainer.innerHTML = `<p class="col-span-full text-center text-gray-500">No matches found.</p>`;
+          matchesContainer.innerHTML = `<p class="col-span-full text-center text-gray-500">No matches found.</p>`;
           return;
         }
 
         let html = "";
         snapshot.forEach(docSnap => {
           const match = docSnap.data();
-
-          // এখানে finished এর মান অনুযায়ী status দেখাবে
-          // finished === true হলে "Finished", না হলে "Live"
+          const id = docSnap.id;
           const statusText = match.finished === true ? "Finished" : "Live";
 
           html += `
-            <div class="bg-white p-5 rounded shadow border">
-              <h2 class="font-semibold text-lg mb-2">${match.title || "Untitled Match"}</h2>
-              <p><strong>Date & Time:</strong> ${new Date(match.dateTime).toLocaleString()}</p>
-              <p><strong>Total Prize:</strong> ৳${match.totalPrice || 0}</p>
-              <p><strong>Entry Fee:</strong> ৳${match.entryFee || 0}</p>
-              <p><strong>Per Goal:</strong> ৳${match.perGoal || 0}</p>
-              <p><strong>Slot Limit:</strong> ${match.slotLimit || 0}</p>
-              <p><strong>Status:</strong> <span class="capitalize font-semibold">${statusText}</span></p>
+            <div class="bg-white p-5 rounded shadow border flex flex-col justify-between">
+              <div>
+                <h2 class="font-semibold text-lg mb-2">${match.title || "Untitled Match"}</h2>
+                <p><strong>Date & Time:</strong> ${new Date(match.dateTime).toLocaleString()}</p>
+                <p><strong>Total Prize:</strong> ৳${match.totalPrice || 0}</p>
+                <p><strong>Entry Fee:</strong> ৳${match.entryFee || 0}</p>
+                <p><strong>Per Goal:</strong> ৳${match.perGoal || 0}</p>
+                <p><strong>Slot Limit:</strong> ${match.slotLimit || 0}</p>
+                <p><strong>Current Status:</strong> <span id="status-${id}" class="capitalize font-semibold">${statusText}</span></p>
+              </div>
+
+              <form data-id="${id}" class="mt-4 flex items-center gap-2" onsubmit="event.preventDefault(); updateStatus('${id}', this.statusSelect.value);">
+                <select name="statusSelect" class="border rounded px-2 py-1" >
+                  <option value="false" ${!match.finished ? "selected" : ""}>Live</option>
+                  <option value="true" ${match.finished ? "selected" : ""}>Finished</option>
+                </select>
+                <button type="submit" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition">
+                  Update Status
+                </button>
+              </form>
             </div>
           `;
         });
 
-        finishedContainer.innerHTML = html;
-
+        matchesContainer.innerHTML = html;
       } catch (error) {
-        finishedContainer.innerHTML = `<p class="col-span-full text-center text-red-600">Error loading matches: ${error.message}</p>`;
+        matchesContainer.innerHTML = `<p class="col-span-full text-center text-red-600">Error loading matches: ${error.message}</p>`;
         console.error("Firestore fetch error:", error);
       }
     }
+
+    // ফাংশন যা status আপডেট করে Firestore এ এবং UI রিফ্রেশ করে
+    async function updateStatus(matchId, statusValue) {
+      try {
+        // statusValue string হিসেবে আসে, তাই boolean এ convert করছি
+        const finishedBool = statusValue === "true";
+
+        const matchRef = doc(db, "matches", matchId);
+        await updateDoc(matchRef, { finished: finishedBool });
+
+        // UI-তে status আপডেট
+        const statusSpan = document.getElementById(`status-${matchId}`);
+        if (statusSpan) {
+          statusSpan.textContent = finishedBool ? "Finished" : "Live";
+        }
+
+        alert("Status updated successfully!");
+      } catch (error) {
+        alert("Failed to update status: " + error.message);
+        console.error("Firestore update error:", error);
+      }
+    }
+
+    // window এ expose করলাম যেন inline onsubmit এ পাওয়া যায়
+    window.updateStatus = updateStatus;
+
   </script>
 </body>
 </html>
