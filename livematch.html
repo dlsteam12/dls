@@ -113,7 +113,8 @@
         <div class="mt-4 flex justify-between items-center text-gray-700 font-semibold">
           <div class="flex-1 text-center">
             <div>${team1.teamName}</div>
-            <div class="text-xs text-gray-400 break-all mb-2">${team1.uid}</div>
+            <div class="text-xs text-gray-400 break-all mb-1">${team1.uid}</div>
+            <div id="result-${id}-${team1.uid}" class="text-sm font-bold text-green-600"></div>
             <button 
               data-matchid="${id}" 
               data-uid="${team1.uid}" 
@@ -126,7 +127,8 @@
 
           <div class="flex-1 text-center">
             <div>${team2.teamName}</div>
-            <div class="text-xs text-gray-400 break-all mb-2">${team2.uid}</div>
+            <div class="text-xs text-gray-400 break-all mb-1">${team2.uid}</div>
+            <div id="result-${id}-${team2.uid}" class="text-sm font-bold text-green-600"></div>
             <button 
               data-matchid="${id}" 
               data-uid="${team2.uid}" 
@@ -187,15 +189,21 @@
         statusDiv.classList.remove("text-red-500");
         statusDiv.classList.add("text-green-600");
 
-        btn.textContent = "Winner Declared ✔️";
-        btn.disabled = true;
+        // Update winner
+        document.getElementById(`result-${matchId}-${winnerUid}`).textContent = "🏆 Winner";
 
+        // Disable all buttons, mark loser
         document.querySelectorAll(`.win-button[data-matchid="${matchId}"]`).forEach(otherBtn => {
-          if (otherBtn !== btn) {
+          const otherUid = otherBtn.dataset.uid;
+          if (otherUid !== winnerUid) {
+            document.getElementById(`result-${matchId}-${otherUid}`).textContent = "❌ Lost";
             otherBtn.disabled = true;
             otherBtn.textContent = "Not Winner";
             otherBtn.classList.remove("bg-green-500");
             otherBtn.classList.add("bg-gray-400");
+          } else {
+            otherBtn.textContent = "Winner Declared ✔️";
+            otherBtn.disabled = true;
           }
         });
 
