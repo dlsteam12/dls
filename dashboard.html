@@ -121,27 +121,32 @@
           else if (fillRatio >= 0.5) progressColor = "bg-yellow-400";
 
           html += `
-            <div class="bg-gray-900 p-4 rounded-md border border-gray-700 space-y-2">
+              <div class="bg-gray-900 p-4 rounded-md border border-gray-700 space-y-2">
   <h4 class="text-yellow-400 font-semibold text-lg">${match.title || "Untitled Match"}</h4>
   <p class="text-gray-300 text-sm">Date & Time: ${formattedDate}</p>
   <p class="text-gray-300 text-sm">Total Price: ৳${match.totalPrice || 'N/A'}</p>
   <p class="text-gray-300 text-sm">Per Goal: ৳${match.perGoal || 'N/A'}</p>
   <p class="text-gray-300 text-sm">Entry Fee: ৳${match.entryFee || 'N/A'}</p>
 
-  <!-- Flex row for progress bar and join/full button -->
-  <div class="flex items-center gap-4 mt-2">
-    <div class="flex-1 bg-gray-700 rounded-full h-2 overflow-hidden">
-      <div class="${progressColor} h-full transition-all duration-300" style="width: ${(fillRatio * 100).toFixed(1)}%"></div>
+  <!-- Flex container for left column (progress bar + slot info) and button -->
+  <div class="flex items-end gap-4 mt-2">
+    <!-- Left Column: progress bar and slot info in a vertical layout -->
+    <div class="flex-1">
+      <div class="bg-gray-700 rounded-full h-2 overflow-hidden">
+        <div class="${progressColor} h-full transition-all duration-300" style="width: ${(fillRatio * 100).toFixed(1)}%"></div>
+      </div>
+      <!-- Slot info placed below the progress bar, aligned to left -->
+      <p class="text-sm text-gray-300 font-semibold text-left">Slot: ${slot} / ${slotLimit}</p>
     </div>
-    ${
-      isFull
-        ? `<button disabled class="bg-gray-700 text-white font-semibold py-1.5 px-4 rounded cursor-not-allowed whitespace-nowrap">Match Full</button>`
-        : `<button onclick="showTeamInput('${matchId}', ${slot}, ${slotLimit}, ${match.entryFee || 0})" class="bg-yellow-400 text-black font-semibold py-1.5 px-4 rounded hover:bg-yellow-300 transition whitespace-nowrap">Join</button>`
-    }
+    <!-- Right Column: Join or Match Full button -->
+    <div>
+      ${
+        isFull
+          ? `<button disabled class="bg-gray-700 text-white font-semibold py-1.5 px-4 rounded cursor-not-allowed whitespace-nowrap">Match Full</button>`
+          : `<button onclick="showTeamInput('${matchId}', ${slot}, ${slotLimit}, ${match.entryFee || 0})" class="bg-yellow-400 text-black font-semibold py-1.5 px-4 rounded hover:bg-yellow-300 transition whitespace-nowrap">Join</button>`
+      }
+    </div>
   </div>
-
-  <!-- Slot Info -->
-  <p class="text-sm mt-1 text-gray-300 font-semibold">Slot: ${slot} / ${slotLimit}</p>
 
   <!-- Participants button -->
   <div class="mt-2">
