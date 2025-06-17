@@ -102,8 +102,16 @@
     // Update finished field in Firestore according to select status
     async function updateStatus(matchId, statusValue) {
       try {
-        // statusValue string, convert to boolean: "true" → true, "false" → false
-        const finishedBool = statusValue === "true";
+        // Explicitly convert "true"/"false" string to boolean true/false
+        let finishedBool = false;
+        if (statusValue === "true") {
+          finishedBool = true;
+        } else if (statusValue === "false") {
+          finishedBool = false;
+        } else {
+          // Default to false if unknown value
+          finishedBool = false;
+        }
 
         const matchRef = doc(db, "matches", matchId);
         await updateDoc(matchRef, { finished: finishedBool });
