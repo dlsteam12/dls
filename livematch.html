@@ -69,6 +69,7 @@
           const match = docSnap.data();
           const id = docSnap.id;
 
+          // শুধু unfinished ম্যাচ দেখাবে
           if (match.finished === true) continue;
 
           const participantsSnapshot = await getDocs(collection(db, "matches", id, "participants"));
@@ -83,6 +84,7 @@
 
         matchesContainer.innerHTML = cardsHtml;
 
+        // বিজয়ী ঘোষণা বাটনে ইভেন্ট লিসেনার লাগানো
         const winButtons = document.querySelectorAll(".win-button");
         winButtons.forEach(button => {
           button.addEventListener("click", declareWinner);
@@ -148,8 +150,8 @@
     window.finishMatch = async function (id) {
       try {
         await updateDoc(doc(db, "matches", id), {
-          status: "finished",
-          finished: true
+          finished: true,
+          status: "finished"
         });
         alert("Match marked as finished.");
         await loadMatches();
@@ -159,7 +161,7 @@
       }
     };
 
-    // Declare Winner Function (unchanged)
+    // Declare Winner Function
     async function declareWinner(e) {
       const btn = e.currentTarget;
       btn.disabled = true;
@@ -190,6 +192,7 @@
         btn.textContent = "Winner Declared ✔️";
         btn.disabled = true;
 
+        // অন্য বিজয়ীর বাটন disable করা
         document.querySelectorAll(`.win-button[data-matchid="${matchId}"]`).forEach(otherBtn => {
           if (otherBtn !== btn) {
             otherBtn.disabled = true;
@@ -210,6 +213,11 @@
         console.error("Error declaring winner:", error);
       }
     }
+
+    // Edit match ফাংশন প্লেসহোল্ডার (তুমি নিজের মতো ইমপ্লিমেন্ট করবে)
+    window.editMatch = function (id) {
+      alert("Edit match functionality not implemented yet. Match ID: " + id);
+    };
   </script>
 </body>
 </html>
