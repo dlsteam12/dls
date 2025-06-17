@@ -128,18 +128,18 @@
   <p class="text-gray-300 text-sm">Per Goal: ৳${match.perGoal || 'N/A'}</p>
   <p class="text-gray-300 text-sm">Entry Fee: ৳${match.entryFee || 'N/A'}</p>
 
-  <!-- Flex container for left column (progress bar + slot info) and button -->
-  <div class="flex items-end gap-4 mt-2">
-    <!-- Left Column: progress bar and slot info in a vertical layout -->
+  <!-- Flex container: Left (progress + slot), Right (button centered) -->
+  <div class="flex items-center gap-4 mt-2">
+    <!-- Left: Progress bar and slot info -->
     <div class="flex-1">
       <div class="bg-gray-700 rounded-full h-2 overflow-hidden">
         <div class="${progressColor} h-full transition-all duration-300" style="width: ${(fillRatio * 100).toFixed(1)}%"></div>
       </div>
-      <!-- Slot info placed below the progress bar, aligned to left -->
-      <p class="text-sm text-gray-300 font-semibold text-left">Slot: ${slot} / ${slotLimit}</p>
+      <p class="text-sm text-gray-300 font-semibold mt-1">Slot: ${slot} / ${slotLimit}</p>
     </div>
-    <!-- Right Column: Join or Match Full button -->
-    <div>
+
+    <!-- Right: Join or Full button vertically centered -->
+    <div class="flex items-center h-full">
       ${
         isFull
           ? `<button disabled class="bg-gray-700 text-white font-semibold py-1.5 px-4 rounded cursor-not-allowed whitespace-nowrap">Match Full</button>`
