@@ -77,20 +77,6 @@
     }
 
     function createCardHTML(id, match) {
-      // ধরে নিচ্ছি 'team1' ও 'team2' ফিল্ড আছে ডাটাবেজে। যদি না থাকে, তাহলে title থেকে parse করতে হবে বা আলাদা ভাবে দিতে হবে।
-      // এখানে উদাহরণস্বরূপ, যদি team1, team2 না থাকে, তাহলে title.split('VS') দিয়ে নাম নেওয়া হচ্ছে।
-      let team1 = match.team1 || "";
-      let team2 = match.team2 || "";
-
-      if (!team1 || !team2) {
-        // Try parse from title: "Barisal Team VS Patuakhali club"
-        const parts = (match.title || "").split(/VS/i);
-        if (parts.length === 2) {
-          team1 = parts[0].trim();
-          team2 = parts[1].trim();
-        }
-      }
-
       return `
       <div id="card-${id}" class="bg-white rounded shadow p-5 flex flex-col justify-between">
         <div>
@@ -100,31 +86,20 @@
           <p><strong>Per Goal (৳):</strong> <span id="perGoal-${id}">${match.perGoal || 0}</span></p>
           <p><strong>Entry Fee (৳):</strong> <span id="entryFee-${id}">${match.entryFee || 0}</span></p>
           <p><strong>Slot Limit:</strong> <span id="slotLimit-${id}">${match.slotLimit || 0}</span></p>
-          <p><strong>Winner:</strong> <span id="winner-${id}" class="text-green-600 font-semibold">${match.winner || "No winner declared"}</span></p>
         </div>
-        <div class="mt-4 flex flex-wrap justify-between items-center gap-2">
-          <div class="flex space-x-3">
-            <button onclick="editMatch('${id}')" class="text-blue-600 hover:underline flex items-center gap-1"><i class="fas fa-edit"></i> Edit</button>
-            <button onclick="deleteMatch('${id}')" class="text-red-600 hover:underline flex items-center gap-1"><i class="fas fa-trash"></i> Delete</button>
-          </div>
-          <div class="flex space-x-3">
-            <button onclick="declareWinner('${id}', '${escapeHtml(team1)}')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition" title="Declare ${team1} as winner">${team1}</button>
-            <button onclick="declareWinner('${id}', '${escapeHtml(team2)}')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition" title="Declare ${team2} as winner">${team2}</button>
-          </div>
+        <div class="mt-4 flex justify-end space-x-3">
+          <button onclick="editMatch('${id}')" class="text-blue-600 hover:underline flex items-center gap-1"><i class="fas fa-edit"></i> Edit</button>
+          <button onclick="deleteMatch('${id}')" class="text-red-600 hover:underline flex items-center gap-1"><i class="fas fa-trash"></i> Delete</button>
         </div>
       </div>
       `;
-    }
-
-    // Escape quotes for inline JS to prevent syntax errors
-    function escapeHtml(text) {
-      return text.replace(/'/g, "\\'").replace(/"/g, '\\"');
     }
 
     window.editMatch = function (id) {
       const card = document.getElementById(`card-${id}`);
       const title = document.getElementById(`title-${id}`).innerText;
       const dateTimeText = document.getElementById(`dateTime-${id}`).innerText;
+      // Parse local date-time string back to ISO for input
       const dateTime = new Date(dateTimeText);
       const localISO = dateTime.toISOString().slice(0,16);
       const totalPrice = document.getElementById(`totalPrice-${id}`).innerText;
@@ -179,18 +154,6 @@
         loadMatches();
       } catch (error) {
         alert("Failed to delete match: " + error.message);
-        console.error(error);
-      }
-    };
-
-    window.declareWinner = async function (id, teamName) {
-      if (!confirm(`Are you sure you want to declare "${teamName}" as the winner?`)) return;
-      try {
-        await updateDoc(doc(db, "matches", id), { winner: teamName });
-        alert(`Winner declared: ${teamName}`);
-        loadMatches();
-      } catch (error) {
-        alert("Failed to declare winner: " + error.message);
         console.error(error);
       }
     };
