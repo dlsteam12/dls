@@ -66,6 +66,7 @@
         let html = "";
         snapshot.forEach(docSnap => {
           const match = docSnap.data();
+          const statusText = match.status ? match.status : "Finished"; // fallback if no status field
           html += `
             <div class="bg-white p-5 rounded shadow border">
               <h2 class="font-semibold text-lg mb-2">${match.title || "Untitled Match"}</h2>
@@ -74,6 +75,7 @@
               <p><strong>Entry Fee:</strong> ৳${match.entryFee || 0}</p>
               <p><strong>Per Goal:</strong> ৳${match.perGoal || 0}</p>
               <p><strong>Slot Limit:</strong> ${match.slotLimit || 0}</p>
+              <p><strong>Status:</strong> <span class="capitalize font-semibold">${statusText}</span></p>
             </div>
           `;
         });
