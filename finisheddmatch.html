@@ -5,68 +5,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Finished Matches</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-
-  <header class="bg-green-700 text-white p-4 flex justify-between items-center sticky top-0 z-30">
-    <h1 class="text-xl font-bold">Finished Matches</h1>
-    <a href="admin.html" class="bg-white text-green-700 px-4 py-2 rounded hover:bg-gray-200 transition">
-      Back to Admin Panel
-    </a>
-  </header>
-
-  <main class="p-4 md:p-6 flex-grow">
-    <div id="finishedMatchesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <p class="text-center col-span-full text-gray-500">Loading finished matches...</p>
-    </div>
-  </main>
+<body class="bg-gray-100 min-h-screen p-4">
+  <h1 class="text-xl font-bold mb-4">Finished Matches</h1>
+  <a href="live-match.html" class="inline-block mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+    Back to Live Matches
+  </a>
+  <div id="finishedContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <p class="text-center col-span-full text-gray-500">Loading...</p>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
-      authDomain: "dlstournament-31ac1.firebaseapp.com",
-      projectId: "dlstournament-31ac1",
-      storageBucket: "dlstournament-31ac1.appspot.com",
-      messagingSenderId: "874377019055",
-      appId: "1:874377019055:web:6e38db2ec7f0d541d2de5a",
-      measurementId: "G-0DGFJEV6GL"
-    };
+  apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
+  authDomain: "dlstournament-31ac1.firebaseapp.com",
+  projectId: "dlstournament-31ac1",
+  storageBucket: "dlstournament-31ac1.appspot.com",
+  messagingSenderId: "874377019055",
+  appId: "1:874377019055:web:6e38db2ec7f0d541d2de5a",
+  measurementId: "G-0DGFJEV6GL"
+};
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const container = document.getElementById("finishedMatchesContainer");
+    const finishedContainer = document.getElementById("finishedContainer");
 
     async function loadFinishedMatches() {
       try {
-        const q = query(collection(db, "finishedmatches"), orderBy("dateTime", "desc"));
+        const q = query(collection(db, "matches"), where("finished", "==", true));
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-          container.innerHTML = `<p class="text-center col-span-full text-gray-500">No finished matches found.</p>`;
+          finishedContainer.innerHTML = `<p class="text-center col-span-full text-gray-500">No finished matches.</p>`;
           return;
         }
 
-        let cardsHtml = "";
-        snapshot.forEach(doc => {
-          const match = doc.data();
-          cardsHtml += `
-            <div class="bg-white p-5 rounded shadow border border-gray-200">
-              <h2 class="text-lg font-semibold mb-2">${match.title || "Untitled Match"}</h2>
-              <p><strong>Date & Time:</strong> ${new Date(match.dateTime).toLocaleString()}</p>
-              <p><strong>Total Price:</strong> ৳${match.totalPrice || 0}</p>
-              <p><strong>Winner UID:</strong> <span class="text-xs text-gray-600 break-all">${match.winnerUid || "N/A"}</span></p>
+        let html = "";
+        snapshot.forEach(docSnap => {
+          const match = docSnap.data();
+          html += `
+            <div class="bg-white p-4 rounded shadow border">
+              <h2 class="font-semibold">${match.title || "Untitled"}</h2>
+              <p><strong>Date:</strong> ${new Date(match.dateTime).toLocaleString()}</p>
+              <p><strong>Total Prize:</strong> ৳${match.totalPrice || 0}</p>
             </div>
           `;
         });
 
-        container.innerHTML = cardsHtml;
-      } catch (error) {
-        container.innerHTML = `<p class="text-center col-span-full text-red-600">Error: ${error.message}</p>`;
-        console.error("Error loading finished matches:", error);
+        finishedContainer.innerHTML = html;
+      } catch (err) {
+        finishedContainer.innerHTML = `<p class="text-red-600">${err.message}</p>`;
       }
     }
 
