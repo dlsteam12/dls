@@ -26,7 +26,6 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
       authDomain: "dlstournament-31ac1.firebaseapp.com",
@@ -53,7 +52,6 @@
 
     async function loadFinishedMatches() {
       try {
-        // শুধুমাত্র finished === true ম্যাচগুলো নিয়ে আসা
         const q = query(collection(db, "matches"), where("finished", "==", true));
         const snapshot = await getDocs(q);
 
@@ -76,11 +74,12 @@
                 <p><strong>Entry Fee:</strong> ৳${match.entryFee || 0}</p>
                 <p><strong>Per Goal:</strong> ৳${match.perGoal || 0}</p>
                 <p><strong>Slot Limit:</strong> ${match.slotLimit || 0}</p>
+                <p><strong>Match Code:</strong> ${match.matchCode || 'N/A'}</p>
                 <p><strong>Status:</strong> <span id="status-${id}" class="capitalize font-semibold">Finished</span></p>
               </div>
 
               <form data-id="${id}" class="mt-4 flex items-center gap-2" onsubmit="event.preventDefault(); updateStatus('${id}', this.statusSelect.value);">
-                <select name="statusSelect" class="border rounded px-2 py-1" >
+                <select name="statusSelect" class="border rounded px-2 py-1">
                   <option value="false">Live</option>
                   <option value="true" selected>Finished</option>
                 </select>
@@ -107,18 +106,11 @@
         await updateDoc(matchRef, { finished: finishedBool });
 
         if (finishedBool) {
-          // যদি finished হয়, মানে Finished, তাহলে UI-তে status আপডেট করো
           const statusSpan = document.getElementById(`status-${matchId}`);
-          if (statusSpan) {
-            statusSpan.textContent = "Finished";
-          }
+          if (statusSpan) statusSpan.textContent = "Finished";
         } else {
-          // যদি finished false হয়, মানে Live হয়েছে, তাহলে UI থেকে ঐ ম্যাচ div টি রিমুভ করো কারণ
-          // এই পেজে Live ম্যাচ দেখানো হবেনা
           const matchDiv = document.getElementById(`match-${matchId}`);
-          if (matchDiv) {
-            matchDiv.remove();
-          }
+          if (matchDiv) matchDiv.remove();
         }
 
         alert("Status updated successfully!");
@@ -129,7 +121,6 @@
     }
 
     window.updateStatus = updateStatus;
-
   </script>
 </body>
-</html>
+</html> 
