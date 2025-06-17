@@ -26,6 +26,7 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // Firebase config তোমার প্রজেক্ট অনুযায়ী ঠিকঠাক বসাও
     const firebaseConfig = {
       apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
       authDomain: "dlstournament-31ac1.firebaseapp.com",
@@ -42,6 +43,7 @@
 
     const finishedContainer = document.getElementById("finishedContainer");
 
+    // ইউজার লগইন না থাকলে login.html এ পাঠাবে
     onAuthStateChanged(auth, user => {
       if (!user) {
         window.location.href = "login.html";
@@ -52,12 +54,8 @@
 
     async function loadFinishedMatches() {
       try {
-        // Query matches where finished == true AND status == "finished"
-        const q = query(
-          collection(db, "matches"),
-          where("finished", "==", true),
-          where("status", "==", "finished")
-        );
+        // finished == true ম্যাচগুলো নিয়ে আসা
+        const q = query(collection(db, "matches"), where("finished", "==", true));
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
