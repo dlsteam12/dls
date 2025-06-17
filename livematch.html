@@ -69,6 +69,8 @@
           const match = docSnap.data();
           const id = docSnap.id;
 
+          if (match.finished === true) continue;
+
           const participantsSnapshot = await getDocs(collection(db, "matches", id, "participants"));
           const participants = participantsSnapshot.docs.map(p => ({
             uid: p.id,
@@ -76,7 +78,6 @@
           }));
 
           matchesCache[id] = { match, participants };
-
           cardsHtml += createCardHTML(id, match, participants);
         }
 
@@ -144,71 +145,12 @@
       `;
     }
 
-    window.editMatch = function (id) {
-      const cached = matchesCache[id];
-      if (!cached) return alert("Match data not found for edit.");
-
-      const { match } = cached;
-      const card = document.getElementById(`card-${id}`);
-      const localISO = new Date(match.dateTime).toISOString().slice(0,16);
-
-      card.innerHTML = `
-        <div class="flex flex-col space-y-3">
-          <input type="text" id="edit-title-${id}" class="border rounded p-2" value="${match.title || ""}" placeholder="Title" />
-          <label class="block">
-            Date & Time:
-            <input type="datetime-local" id="edit-dateTime-${id}" class="border rounded p-2 w-full" value="${localISO}" />
-          </label>
-          <input type="number" id="edit-totalPrice-${id}" class="border rounded p-2" value="${match.totalPrice || 0}" placeholder="Total Price (৳)" />
-          <input type="number" id="edit-perGoal-${id}" class="border rounded p-2" value="${match.perGoal || 0}" placeholder="Per Goal (৳)" />
-          <input type="number" id="edit-entryFee-${id}" class="border rounded p-2" value="${match.entryFee || 0}" placeholder="Entry Fee (৳)" />
-          <input type="number" id="edit-slotLimit-${id}" class="border rounded p-2" value="${match.slotLimit || 0}" placeholder="Slot Limit" />
-        </div>
-        <div class="mt-4 flex justify-end space-x-3">
-          <button onclick="saveMatch('${id}')" class="text-green-600 hover:underline flex items-center gap-1"><i class="fas fa-save"></i> Save</button>
-          <button onclick="cancelEdit('${id}')" class="text-gray-600 hover:underline flex items-center gap-1"><i class="fas fa-times"></i> Cancel</button>
-        </div>
-      `;
-    };
-
-    window.cancelEdit = function (id) {
-      const cached = matchesCache[id];
-      if (!cached) return alert("Match data not found for cancel.");
-
-      const { match, participants } = cached;
-      const card = document.getElementById(`card-${id}`);
-
-      card.innerHTML = createCardHTML(id, match, participants);
-
-      const buttons = card.querySelectorAll(".win-button");
-      buttons.forEach(button => {
-        button.addEventListener("click", declareWinner);
-      });
-    };
-
-    window.saveMatch = async function (id) {
-      const updatedData = {
-        title: document.getElementById(`edit-title-${id}`).value.trim(),
-        dateTime: new Date(document.getElementById(`edit-dateTime-${id}`).value).toISOString(),
-        totalPrice: parseFloat(document.getElementById(`edit-totalPrice-${id}`).value),
-        perGoal: parseFloat(document.getElementById(`edit-perGoal-${id}`).value),
-        entryFee: parseFloat(document.getElementById(`edit-entryFee-${id}`).value),
-        slotLimit: parseInt(document.getElementById(`edit-slotLimit-${id}`).value, 10) || 0
-      };
-
-      try {
-        await updateDoc(doc(db, "matches", id), updatedData);
-        alert("Match updated successfully.");
-        await loadMatches();
-      } catch (error) {
-        alert("Update failed: " + error.message);
-        console.error(error);
-      }
-    };
-
     window.finishMatch = async function (id) {
       try {
-        await updateDoc(doc(db, "matches", id), { status: "finished" });
+        await updateDoc(doc(db, "matches", id), {
+          status: "finished",
+          finished: true
+        });
         alert("Match marked as finished.");
         await loadMatches();
       } catch (error) {
@@ -217,6 +159,7 @@
       }
     };
 
+    // Declare Winner Function (unchanged)
     async function declareWinner(e) {
       const btn = e.currentTarget;
       btn.disabled = true;
