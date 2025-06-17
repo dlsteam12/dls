@@ -6,28 +6,35 @@
   <title>Finished Matches</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-4">
-  <h1 class="text-xl font-bold mb-4">Finished Matches</h1>
-  <a href="live-match.html" class="inline-block mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-    Back to Live Matches
-  </a>
-  <div id="finishedContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    <p class="text-center col-span-full text-gray-500">Loading...</p>
-  </div>
+<body class="bg-gray-100 min-h-screen p-6">
+
+  <header class="mb-6 flex justify-between items-center">
+    <h1 class="text-2xl font-bold text-gray-800">Finished Matches</h1>
+    <a href="live_matches.html" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+      Back to Live Matches
+    </a>
+  </header>
+
+  <main>
+    <div id="finishedContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <p class="text-center col-span-full text-gray-500">Loading finished matches...</p>
+    </div>
+  </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // তোমার Firebase config নিচে বসাও
     const firebaseConfig = {
-  apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
-  authDomain: "dlstournament-31ac1.firebaseapp.com",
-  projectId: "dlstournament-31ac1",
-  storageBucket: "dlstournament-31ac1.appspot.com",
-  messagingSenderId: "874377019055",
-  appId: "1:874377019055:web:6e38db2ec7f0d541d2de5a",
-  measurementId: "G-0DGFJEV6GL"
-};
+      apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
+      authDomain: "dlstournament-31ac1.firebaseapp.com",
+      projectId: "dlstournament-31ac1",
+      storageBucket: "dlstournament-31ac1.appspot.com",
+      messagingSenderId: "874377019055",
+      appId: "1:874377019055:web:6e38db2ec7f0d541d2de5a",
+      measurementId: "G-0DGFJEV6GL"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -35,11 +42,11 @@
 
     async function loadFinishedMatches() {
       try {
-        const q = query(collection(db, "matches"), where("finished", "==", true));
-        const snapshot = await getDocs(q);
+        const matchesQuery = query(collection(db, "matches"), where("finished", "==", true));
+        const snapshot = await getDocs(matchesQuery);
 
         if (snapshot.empty) {
-          finishedContainer.innerHTML = `<p class="text-center col-span-full text-gray-500">No finished matches.</p>`;
+          finishedContainer.innerHTML = `<p class="text-center col-span-full text-gray-500">No finished matches found.</p>`;
           return;
         }
 
@@ -47,17 +54,21 @@
         snapshot.forEach(docSnap => {
           const match = docSnap.data();
           html += `
-            <div class="bg-white p-4 rounded shadow border">
-              <h2 class="font-semibold">${match.title || "Untitled"}</h2>
-              <p><strong>Date:</strong> ${new Date(match.dateTime).toLocaleString()}</p>
+            <div class="bg-white rounded shadow p-4 border border-gray-300">
+              <h2 class="font-semibold text-lg mb-2">${match.title || "Untitled Match"}</h2>
+              <p><strong>Date & Time:</strong> ${match.dateTime ? new Date(match.dateTime).toLocaleString() : "N/A"}</p>
               <p><strong>Total Prize:</strong> ৳${match.totalPrice || 0}</p>
+              <p><strong>Entry Fee:</strong> ৳${match.entryFee || 0}</p>
+              <p><strong>Slot Limit:</strong> ${match.slotLimit || 0}</p>
             </div>
           `;
         });
 
         finishedContainer.innerHTML = html;
-      } catch (err) {
-        finishedContainer.innerHTML = `<p class="text-red-600">${err.message}</p>`;
+
+      } catch (error) {
+        finishedContainer.innerHTML = `<p class="text-red-600 text-center col-span-full">${error.message}</p>`;
+        console.error("Error loading finished matches:", error);
       }
     }
 
