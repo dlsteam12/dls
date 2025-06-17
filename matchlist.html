@@ -1,162 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Match List</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Match List</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
-  <header class="bg-blue-700 text-white p-4 flex justify-between items-center sticky top-0 z-30">
-    <h1 class="text-xl font-bold">Matches List</h1>
-    <a href="admin.html" class="bg-white text-blue-700 px-4 py-2 rounded hover:bg-gray-200 transition">
-      Back to Admin Panel
-    </a>
-  </header>
+  <header class="bg-blue-700 text-white p-4 flex justify-between items-center sticky top-0 z-30">
+    <h1 class="text-xl font-bold">Matches List</h1>
+    <a href="admin.html" class="bg-white text-blue-700 px-4 py-2 rounded hover:bg-gray-200 transition">
+      Back to Admin Panel
+    </a>
+  </header>
 
-  <main class="p-4 md:p-6 flex-grow">
-    <div id="matchesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <p class="text-center col-span-full text-gray-500">Loading matches...</p>
-    </div>
-  </main>
+  <main class="p-4 md:p-6 flex-grow">
+    <div id="matchesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <p class="text-center col-span-full text-gray-500">Loading matches...</p>
+    </div>
+  </main>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
-      authDomain: "dlstournament-31ac1.firebaseapp.com",
-      projectId: "dlstournament-31ac1",
-      storageBucket: "dlstournament-31ac1.appspot.com",
-      messagingSenderId: "874377019055",
-      appId: "1:874377019055:web:6e38db2ec7f0d541d2de5a",
-      measurementId: "G-0DGFJEV6GL"
-    };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
+      authDomain: "dlstournament-31ac1.firebaseapp.com",
+      projectId: "dlstournament-31ac1",
+      storageBucket: "dlstournament-31ac1.appspot.com",
+      messagingSenderId: "874377019055",
+      appId: "1:874377019055:web:6e38db2ec7f0d541d2de5a",
+      measurementId: "G-0DGFJEV6GL"
+    };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const matchesContainer = document.getElementById("matchesContainer");
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const matchesContainer = document.getElementById("matchesContainer");
 
-    onAuthStateChanged(auth, user => {
-      if (!user) {
-        window.location.href = "login.html";
-      } else {
-        loadMatches();
-      }
-    });
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        window.location.href = "login.html";
+      } else {
+        loadMatches();
+      }
+    });
 
-    async function loadMatches() {
-      try {
-        const q = query(collection(db, "matches"), orderBy("dateTime", "asc"));
-        const snapshot = await getDocs(q);
+    async function loadMatches() {
+      try {
+        const q = query(collection(db, "matches"), orderBy("dateTime", "asc"));
+        const snapshot = await getDocs(q);
 
-        if (snapshot.empty) {
-          matchesContainer.innerHTML = `<p class="text-center col-span-full text-gray-500">No matches found.</p>`;
-          return;
-        }
+        if (snapshot.empty) {
+          matchesContainer.innerHTML = `<p class="text-center col-span-full text-gray-500">No matches found.</p>`;
+          return;
+        }
 
-        let cardsHtml = "";
-        snapshot.forEach(docSnap => {
-          const match = docSnap.data();
-          const id = docSnap.id;
+        let cardsHtml = "";
+        snapshot.forEach(docSnap => {
+          const match = docSnap.data();
+          const id = docSnap.id;
 
-          cardsHtml += createCardHTML(id, match);
-        });
+          cardsHtml += createCardHTML(id, match);
+        });
 
-        matchesContainer.innerHTML = cardsHtml;
+        matchesContainer.innerHTML = cardsHtml;
 
-      } catch (error) {
-        matchesContainer.innerHTML = `<p class="text-center col-span-full text-red-600">Error: ${error.message}</p>`;
-        console.error(error);
-      }
-    }
+      } catch (error) {
+        matchesContainer.innerHTML = `<p class="text-center col-span-full text-red-600">Error: ${error.message}</p>`;
+        console.error(error);
+      }
+    }
 
-    function createCardHTML(id, match) {
-      return `
-      <div id="card-${id}" class="bg-white rounded shadow p-5 flex flex-col justify-between">
-        <div>
-          <h2 id="title-${id}" class="text-lg font-semibold mb-2">${match.title || ""}</h2>
-          <p><strong>Date & Time:</strong> <span id="dateTime-${id}">${new Date(match.dateTime).toLocaleString()}</span></p>
-          <p><strong>Total Price (৳):</strong> <span id="totalPrice-${id}">${match.totalPrice || 0}</span></p>
-          <p><strong>Per Goal (৳):</strong> <span id="perGoal-${id}">${match.perGoal || 0}</span></p>
-          <p><strong>Entry Fee (৳):</strong> <span id="entryFee-${id}">${match.entryFee || 0}</span></p>
-          <p><strong>Slot Limit:</strong> <span id="slotLimit-${id}">${match.slotLimit || 0}</span></p>
-        </div>
-        <div class="mt-4 flex justify-end space-x-3">
-          <button onclick="editMatch('${id}')" class="text-blue-600 hover:underline flex items-center gap-1"><i class="fas fa-edit"></i> Edit</button>
-          <button onclick="deleteMatch('${id}')" class="text-red-600 hover:underline flex items-center gap-1"><i class="fas fa-trash"></i> Delete</button>
-        </div>
-      </div>
-      `;
-    }
+    function createCardHTML(id, match) {
+      return `
+      <div id="card-${id}" class="bg-white rounded shadow p-5 flex flex-col justify-between">
+        <div>
+          <h2 id="title-${id}" class="text-lg font-semibold mb-2">${match.title || ""}</h2>
+          <p><strong>Date & Time:</strong> <span id="dateTime-${id}">${new Date(match.dateTime).toLocaleString()}</span></p>
+          <p><strong>Total Price (৳):</strong> <span id="totalPrice-${id}">${match.totalPrice || 0}</span></p>
+          <p><strong>Per Goal (৳):</strong> <span id="perGoal-${id}">${match.perGoal || 0}</span></p>
+          <p><strong>Entry Fee (৳):</strong> <span id="entryFee-${id}">${match.entryFee || 0}</span></p>
+          <p><strong>Slot Limit:</strong> <span id="slotLimit-${id}">${match.slotLimit || 0}</span></p>
+        </div>
+        <div class="mt-4 flex justify-end space-x-3">
+          <button onclick="editMatch('${id}')" class="text-blue-600 hover:underline flex items-center gap-1"><i class="fas fa-edit"></i> Edit</button>
+          <button onclick="deleteMatch('${id}')" class="text-red-600 hover:underline flex items-center gap-1"><i class="fas fa-trash"></i> Delete</button>
+        </div>
+      </div>
+      `;
+    }
 
-    window.editMatch = function (id) {
-      const card = document.getElementById(`card-${id}`);
-      const title = document.getElementById(`title-${id}`).innerText;
-      const dateTimeText = document.getElementById(`dateTime-${id}`).innerText;
-      // Parse local date-time string back to ISO for input
-      const dateTime = new Date(dateTimeText);
-      const localISO = dateTime.toISOString().slice(0,16);
-      const totalPrice = document.getElementById(`totalPrice-${id}`).innerText;
-      const perGoal = document.getElementById(`perGoal-${id}`).innerText;
-      const entryFee = document.getElementById(`entryFee-${id}`).innerText;
-      const slotLimit = document.getElementById(`slotLimit-${id}`).innerText;
+    window.editMatch = function (id) {
+      const card = document.getElementById(`card-${id}`);
+      const title = document.getElementById(`title-${id}`).innerText;
+      const dateTimeText = document.getElementById(`dateTime-${id}`).innerText;
+      // Parse local date-time string back to ISO for input
+      const dateTime = new Date(dateTimeText);
+      const localISO = dateTime.toISOString().slice(0,16);
+      const totalPrice = document.getElementById(`totalPrice-${id}`).innerText;
+      const perGoal = document.getElementById(`perGoal-${id}`).innerText;
+      const entryFee = document.getElementById(`entryFee-${id}`).innerText;
+      const slotLimit = document.getElementById(`slotLimit-${id}`).innerText;
 
-      card.innerHTML = `
-        <div class="flex flex-col space-y-3">
-          <input type="text" id="edit-title-${id}" class="border rounded p-2" value="${title}" placeholder="Title" />
-          <label class="block">
-            Date & Time:
-            <input type="datetime-local" id="edit-dateTime-${id}" class="border rounded p-2 w-full" value="${localISO}" />
-          </label>
-          <input type="number" id="edit-totalPrice-${id}" class="border rounded p-2" value="${totalPrice}" placeholder="Total Price (৳)" />
-          <input type="number" id="edit-perGoal-${id}" class="border rounded p-2" value="${perGoal}" placeholder="Per Goal (৳)" />
-          <input type="number" id="edit-entryFee-${id}" class="border rounded p-2" value="${entryFee}" placeholder="Entry Fee (৳)" />
-          <input type="number" id="edit-slotLimit-${id}" class="border rounded p-2" value="${slotLimit}" placeholder="Slot Limit" />
-        </div>
-        <div class="mt-4 flex justify-end space-x-3">
-          <button onclick="saveMatch('${id}')" class="text-green-600 hover:underline flex items-center gap-1"><i class="fas fa-save"></i> Save</button>
-          <button onclick="loadMatches()" class="text-gray-600 hover:underline flex items-center gap-1"><i class="fas fa-times"></i> Cancel</button>
-        </div>
-      `;
-    };
+      card.innerHTML = `
+        <div class="flex flex-col space-y-3">
+          <input type="text" id="edit-title-${id}" class="border rounded p-2" value="${title}" placeholder="Title" />
+          <label class="block">
+            Date & Time:
+            <input type="datetime-local" id="edit-dateTime-${id}" class="border rounded p-2 w-full" value="${localISO}" />
+          </label>
+          <input type="number" id="edit-totalPrice-${id}" class="border rounded p-2" value="${totalPrice}" placeholder="Total Price (৳)" />
+          <input type="number" id="edit-perGoal-${id}" class="border rounded p-2" value="${perGoal}" placeholder="Per Goal (৳)" />
+          <input type="number" id="edit-entryFee-${id}" class="border rounded p-2" value="${entryFee}" placeholder="Entry Fee (৳)" />
+          <input type="number" id="edit-slotLimit-${id}" class="border rounded p-2" value="${slotLimit}" placeholder="Slot Limit" />
+        </div>
+        <div class="mt-4 flex justify-end space-x-3">
+          <button onclick="saveMatch('${id}')" class="text-green-600 hover:underline flex items-center gap-1"><i class="fas fa-save"></i> Save</button>
+          <button onclick="loadMatches()" class="text-gray-600 hover:underline flex items-center gap-1"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      `;
+    };
 
-    window.saveMatch = async function (id) {
-      const updatedData = {
-        title: document.getElementById(`edit-title-${id}`).value.trim(),
-        dateTime: new Date(document.getElementById(`edit-dateTime-${id}`).value).toISOString(),
-        totalPrice: parseFloat(document.getElementById(`edit-totalPrice-${id}`).value),
-        perGoal: parseFloat(document.getElementById(`edit-perGoal-${id}`).value),
-        entryFee: parseFloat(document.getElementById(`edit-entryFee-${id}`).value),
-        slotLimit: parseInt(document.getElementById(`edit-slotLimit-${id}`).value, 10) || 0
-      };
+    window.saveMatch = async function (id) {
+      const updatedData = {
+        title: document.getElementById(`edit-title-${id}`).value.trim(),
+        dateTime: new Date(document.getElementById(`edit-dateTime-${id}`).value).toISOString(),
+        totalPrice: parseFloat(document.getElementById(`edit-totalPrice-${id}`).value),
+        perGoal: parseFloat(document.getElementById(`edit-perGoal-${id}`).value),
+        entryFee: parseFloat(document.getElementById(`edit-entryFee-${id}`).value),
+        slotLimit: parseInt(document.getElementById(`edit-slotLimit-${id}`).value, 10) || 0
+      };
 
-      try {
-        await updateDoc(doc(db, "matches", id), updatedData);
-        alert("Match updated successfully.");
-        loadMatches();
-      } catch (error) {
-        alert("Update failed: " + error.message);
-        console.error(error);
-      }
-    };
+      try {
+        await updateDoc(doc(db, "matches", id), updatedData);
+        alert("Match updated successfully.");
+        loadMatches();
+      } catch (error) {
+        alert("Update failed: " + error.message);
+        console.error(error);
+      }
+    };
 
-    window.deleteMatch = async function (id) {
-      if (!confirm("Are you sure you want to delete this match?")) return;
-      try {
-        await deleteDoc(doc(db, "matches", id));
-        alert("Match deleted.");
-        loadMatches();
-      } catch (error) {
-        alert("Failed to delete match: " + error.message);
-        console.error(error);
-      }
-    };
-  </script>
+    window.deleteMatch = async function (id) {
+      if (!confirm("Are you sure you want to delete this match?")) return;
+      try {
+        await deleteDoc(doc(db, "matches", id));
+        alert("Match deleted.");
+        loadMatches();
+      } catch (error) {
+        alert("Failed to delete match: " + error.message);
+        console.error(error);
+      }
+    };
+  </script>
 </body>
 </html>
