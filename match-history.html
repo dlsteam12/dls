@@ -24,6 +24,7 @@
       <i class="fa-solid fa-headset font-bold text-1xl"></i>
     </div>
   </header>
+
   <a href="dashboard.html" class="text-yellow-400 underline hover:text-yellow-300 mx-auto max-w-md block mb-4">Back To Dashboard</a>
 
   <main id="matchHistory" class="space-y-6 px-3 max-w-md mx-auto">
@@ -108,7 +109,6 @@
                     placeholder="Enter screenshot URL"
                     class="w-full px-3 py-2 rounded bg-gray-900 text-white border border-gray-600 focus:outline-none focus:border-yellow-400"
                     value="${currentScreenshot}"
-                    oninput="showPreview('${matchId}')"
                   />
                   <button
                     onclick="uploadScreenshot('${matchId}')"
@@ -121,6 +121,9 @@
                   </div>
                 </div>
               </div>
+              <script>
+                setTimeout(() => showPreview("${matchId}"), 100);
+              </script>
             `;
           }
         }
@@ -139,11 +142,7 @@
       const url = input.value.trim();
 
       if (!url) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'Empty URL',
-          text: 'Please enter a valid screenshot URL.',
-        });
+        Swal.fire({ icon: 'warning', title: 'Empty URL', text: 'Please enter a screenshot URL.' });
         return;
       }
 
@@ -159,28 +158,23 @@
           showConfirmButton: false,
         });
 
-        showPreview(matchId); // refresh preview image
+        showPreview(matchId);
 
       } catch (error) {
-        console.error("Error uploading screenshot URL:", error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Upload Failed',
-          text: 'Failed to upload screenshot URL. Please try again.',
-        });
+        console.error("Error uploading screenshot:", error);
+        Swal.fire({ icon: 'error', title: 'Upload Failed', text: 'Please try again later.' });
       }
-    }
+    };
 
     window.showPreview = function(matchId) {
       const url = document.getElementById(`screenshot-${matchId}`).value.trim();
       const previewDiv = document.getElementById(`preview-${matchId}`);
-
       if (url) {
         previewDiv.innerHTML = `<img src="${url}" alt="Screenshot Preview" class="rounded-md border border-gray-700 max-w-full h-auto mt-2"/>`;
       } else {
         previewDiv.innerHTML = "";
       }
-    }
+    };
   </script>
 </body>
 </html>
