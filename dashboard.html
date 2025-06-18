@@ -59,7 +59,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, collection, getDocs, updateDoc, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, collection, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
   const firebaseConfig = {
@@ -127,10 +127,10 @@
           <div class="flex items-center justify-between">
             <h4 class="text-yellow-400 font-semibold text-lg flex items-center gap-2">
               ${match.title || "Untitled Match"}
-              <i title="Upload Match Image"
-                 onclick="showImageUpload('${matchId}')"
-                 class="fa-solid fa-image cursor-pointer text-yellow-300 hover:text-yellow-400 transition"
-                 style="font-size: 1.1rem;"></i>
+              <label class="cursor-pointer text-yellow-300 hover:text-yellow-400">
+                <i class="fa-solid fa-image" style="font-size: 1.1rem;"></i>
+                <input type="file" accept="image/*" onchange="uploadImage(event, '${matchId}')" style="display: none;" />
+              </label>
             </h4>
           </div>
           <p class="text-gray-300 text-sm">Date & Time: ${formattedDate}</p>
@@ -192,58 +192,32 @@
     }, 1000);
   }
 
-  window.showImageUpload = async (matchId) => {
-    if (!currentUser) return;
-
-    const userId = currentUser.uid;
-    const participantRef = doc(db, "matches", matchId, "participants", userId);
-    const participantSnap = await getDoc(participantRef);
-
-    if (!participantSnap.exists()) {
-      Swal.fire("Access Denied", "You need to join the match to upload an image.", "warning");
+  window.uploadImage = async function (event, matchId) {
+    const file = event.target.files[0];
+    if (!file || !file.type.startsWith("image/")) {
+      alert("Please select a valid image.");
       return;
     }
 
-    const { value: file } = await Swal.fire({
-      title: 'Upload Match Image',
-      input: 'file',
-      inputAttributes: {
-        accept: 'image/*',
-        'aria-label': 'Upload your match image'
-      },
-      confirmButtonText: 'Upload',
-      showCancelButton: true,
-      preConfirm: (file) => {
-        return new Promise((resolve, reject) => {
-          if (!file) reject("Please select an image.");
-          else if (!file.type.startsWith("image/")) reject("Only image files allowed.");
-          else resolve(file);
-        });
-      }
-    });
+    const userId = currentUser?.uid;
+    if (!userId) return;
 
-    if (!file) return;
-
-    // SHOW LOADING ONLY AFTER FILE SELECTED
-    Swal.fire({
-      title: 'Uploading...',
-      html: 'Please wait while your image is uploaded.',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
-    });
+    const participantRef = doc(db, "matches", matchId, "participants", userId);
+    const participantSnap = await getDoc(participantRef);
+    if (!participantSnap.exists()) {
+      alert("You need to join the match before uploading.");
+      return;
+    }
 
     const ext = file.name.split('.').pop();
     const storageRef = ref(storage, `matchImages/${matchId}/${userId}_${Date.now()}.${ext}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
     uploadTask.on('state_changed',
-      (snapshot) => {
-        const progress = Math.floor((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-        Swal.getHtmlContainer().innerHTML = `Uploading... <b>${progress}%</b>`;
-      },
+      null,
       (error) => {
         console.error("Upload error:", error);
-        Swal.fire("Error", "Failed to upload image.", "error");
+        alert("Failed to upload image.");
       },
       async () => {
         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
@@ -251,7 +225,7 @@
           uploadedImageURL: downloadURL,
           uploadedAt: new Date()
         });
-        Swal.fire("Uploaded!", "Your image has been uploaded successfully.", "success");
+        alert("Image uploaded successfully.");
       }
     );
   };
