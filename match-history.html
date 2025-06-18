@@ -17,10 +17,9 @@
 
   <header class="mb-6 flex items-center justify-between border-b border-yellow-400 pb-2">
     <h1 class="text-yellow-400 text-3xl font-bold">Match History</h1>
-    <button onclick="logout()" title="Logout" class="text-gray-300 hover:text-yellow-400">
-      <i class="fa-solid fa-right-from-bracket text-2xl"></i>
-    </button>
+    <!-- Logout button removed as requested -->
   </header>
+  <a href="dashboard.html" class="text-yellow-400 underline hover:text-yellow-300">Back To Dashboard</a>
 
   <main id="matchHistory" class="space-y-6">
     <p class="text-gray-400">Loading your match history...</p>
@@ -107,11 +106,6 @@
         matchHistoryEl.innerHTML = "<p class='text-red-500'>Failed to load match history.</p>";
       }
     }
-
-    window.logout = async () => {
-      await signOut(auth);
-      window.location.href = "login.html";
-    };
   </script>
 </body>
 </html>
