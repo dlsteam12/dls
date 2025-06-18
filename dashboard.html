@@ -1,3 +1,4 @@
+<!-- START: Full HTML -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -66,8 +67,7 @@
     projectId: "dlstournament-31ac1",
     storageBucket: "dlstournament-31ac1.appspot.com",
     messagingSenderId: "874377019055",
-    appId: "1:874377019055:web:6e38db2ec7f0d541d2de5a",
-    measurementId: "G-0DGFJEV6GL"
+    appId: "1:874377019055:web:6e38db2ec7f0d541d2de5a"
   };
 
   const app = initializeApp(firebaseConfig);
@@ -129,7 +129,7 @@
         <h4 class="text-yellow-400 font-semibold text-lg">${match.title || "Untitled Match"}</h4>
         <p class="text-gray-300 text-sm">Date & Time: ${formattedDate}</p>
         <p class="text-gray-300 text-sm">Total Price: ৳${match.totalPrice || 'N/A'}</p>
-        <p class="text-gray-300 text-sm">Per Goal: ৳${match.perGoal || 'N/A'}</p>
+        <p class="text-gray-300 text-sm">Per Goal: ৳${match.perGoal != null ? match.perGoal : 'N/A'}</p>
         <p class="text-gray-300 text-sm">Entry Fee: ৳${match.entryFee || 'N/A'}</p>
 
         <div class="flex items-center gap-4 mt-2">
@@ -330,3 +330,4 @@
 
 </body>
 </html>
+<!-- END: Full HTML -->
