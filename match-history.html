@@ -1,39 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Match History</title>
+  <title>Upload Match Screenshot</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <style>
-    .glow-yellow { box-shadow: 0 0 5px rgba(234, 179, 8, 0.5); }
-  </style>
 </head>
-<body class="bg-black text-white flex flex-col min-h-screen pb-16 relative">
+<body class="bg-black text-white min-h-screen flex flex-col items-center justify-center p-4">
 
-  <!-- Header -->
-  <header class="bg-black w-full max-w-md shadow-md py-2 px-3 mb-2 mx-auto border-b border-gray-600 flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <div class="bg-yellow-600 bg-opacity-50 border border-yellow-500 text-yellow-300 w-9 h-9 flex items-center justify-center font-bold rounded-full" style="font-family: 'Audiowide', cursive;">KD</div>
-      <h2 class="text-xl font-bold bg-gradient-to-r from-yellow-400 via-green-300 to-yellow-400 bg-clip-text text-transparent" style="font-family: 'Audiowide', cursive;">Khelo Dls</h2>
-    </div>
-    <div class="flex items-center gap-6 text-2xl text-gray-100">
-      <i class="fa-solid fa-headset font-bold text-1xl"></i>
-    </div>
-  </header>
-  <a href="dashboard.html" class="text-yellow-400 underline hover:text-yellow-300">Back To Dashboard</a>
+  <h1 class="text-yellow-400 text-3xl font-bold mb-6">Upload Match Screenshot</h1>
 
-  <main id="matchHistory" class="space-y-6 px-3">
-    <p class="text-gray-400">Loading your match history...</p>
-  </main>
+  <input type="file" id="fileInput" accept="image/*" class="mb-4 p-2 rounded" />
+  <button id="uploadBtn" class="bg-yellow-500 text-black px-4 py-2 rounded hover:bg-yellow-400">Upload Screenshot</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, collection, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
     const firebaseConfig = {
@@ -49,102 +33,63 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
+
     let currentUser = null;
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return window.location.href = "login.html";
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Not Logged In',
+          text: 'Please login first.',
+          confirmButtonText: 'OK'
+        }).then(() => {
+          window.location.href = "login.html";
+        });
+        return;
+      }
       currentUser = user;
-      fetchMatchHistory();
     });
 
-    async function fetchMatchHistory() {
-      const matchHistoryEl = document.getElementById("matchHistory");
-      matchHistoryEl.innerHTML = "Loading your match history...";
+    document.getElementById('uploadBtn').addEventListener('click', async () => {
+      if (!currentUser) {
+        Swal.fire('Error', 'User not authenticated.', 'error');
+        return;
+      }
+
+      const fileInput = document.getElementById('fileInput');
+      if (fileInput.files.length === 0) {
+        Swal.fire('Error', 'Please select an image file.', 'warning');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const storageRef = ref(storage, `screenshots/${currentUser.uid}/${Date.now()}_${file.name}`);
+
       try {
-        const matchesSnapshot = await getDocs(collection(db, "matches"));
-        let html = "";
-        let found = false;
+        // Upload file to Firebase Storage
+        await uploadBytes(storageRef, file);
 
-        for (const docSnap of matchesSnapshot.docs) {
-          const matchId = docSnap.id;
-          const matchData = docSnap.data();
+        // Get downloadable URL
+        const downloadURL = await getDownloadURL(storageRef);
 
-          const participantRef = doc(db, "matches", matchId, "participants", currentUser.uid);
-          const participantSnap = await getDoc(participantRef);
+        // Save downloadURL to Firestore user document
+        const userDocRef = doc(db, "users", currentUser.uid);
 
-          if (participantSnap.exists()) {
-            found = true;
-            const pData = participantSnap.data();
-            const matchDate = matchData.dateTime?.toDate?.() || new Date(matchData.dateTime);
-            const formattedDate = matchDate.toLocaleString().replace(/GMT.*/, "").trim();
-
-            // Get all participants
-            const participantsCol = collection(db, "matches", matchId, "participants");
-            const participantsSnapshot = await getDocs(participantsCol);
-            let participantsHtml = "<ul class='list-disc list-inside max-h-40 overflow-auto text-gray-300'>";
-            participantsSnapshot.forEach(docSnap => {
-              const participant = docSnap.data();
-              participantsHtml += `<li>${participant.teamName || "No Name"}</li>`;
-            });
-            participantsHtml += "</ul>";
-
-            html += `
-              <div class="bg-gray-800 border border-gray-600 p-4 rounded-md space-y-2">
-                <h4 class="text-yellow-400 font-semibold text-lg">${matchData.title || "Untitled Match"}</h4>
-                <p class="text-gray-300 text-sm">Date & Time: ${formattedDate}</p>
-                <p class="text-gray-300 text-sm">Your Team: <span class="font-bold text-yellow-400">${pData.teamName || "No Name"}</span></p>
-                <p class="text-gray-300 text-sm">Total Prize: ৳${matchData.totalPrice || 'N/A'}</p>
-                <p class="text-gray-300 text-sm">Per Goal: ৳${matchData.perGoal != null ? matchData.perGoal : 'N/A'}</p>
-                <p class="text-gray-300 text-sm">Entry Fee: ৳${matchData.entryFee || 'N/A'}</p>
-                <div>
-                  <h5 class="text-yellow-300 font-semibold">Participants:</h5>
-                  ${participantsHtml}
-                </div>
-
-                <div class="mt-2 space-y-1">
-                  <label class="block text-gray-300 text-sm">Upload Match Screenshot:</label>
-                  <input type="file" accept="image/*" id="screenshot-${matchId}" class="w-full text-sm text-gray-300 bg-gray-900 border border-gray-700 rounded px-2 py-1">
-                  <button data-match-id="${matchId}" class="upload-btn bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-1 rounded text-sm mt-1">Submit</button>
-                </div>
-              </div>
-            `;
-          }
-        }
-
-        matchHistoryEl.innerHTML = found
-          ? html
-          : `<p class="text-gray-400">You haven't joined any matches yet.</p>`;
-
-        // Attach event listeners after HTML is rendered
-        document.querySelectorAll('.upload-btn').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-            const matchId = e.target.getAttribute('data-match-id');
-            const fileInput = document.getElementById(`screenshot-${matchId}`);
-            const file = fileInput.files[0];
-            if (!file) return Swal.fire("No File", "Please select a screenshot.", "warning");
-
-            try {
-              const storageRef = ref(storage, `screenshots/${matchId}/${currentUser.uid}.jpg`);
-              await uploadBytes(storageRef, file);
-              const downloadURL = await getDownloadURL(storageRef);
-
-              const participantRef = doc(db, "matches", matchId, "participants", currentUser.uid);
-              await updateDoc(participantRef, { screenshotURL: downloadURL });
-
-              Swal.fire("Success", "Screenshot uploaded successfully!", "success");
-              fileInput.value = "";
-            } catch (err) {
-              console.error(err);
-              Swal.fire("Error", "Upload failed. Try again.", "error");
-            }
-          });
+        // Update 'latestScreenshot' field (or add your own field)
+        await updateDoc(userDocRef, {
+          latestScreenshot: downloadURL,
+          screenshotUploadedAt: new Date()
         });
 
+        Swal.fire('Success', 'Screenshot uploaded successfully!', 'success');
+        fileInput.value = ''; // reset input
       } catch (error) {
-        console.error("Error fetching match history:", error);
-        matchHistoryEl.innerHTML = "<p class='text-red-500'>Failed to load match history.</p>";
+        console.error('Upload failed:', error);
+        Swal.fire('Error', 'Failed to upload screenshot.', 'error');
       }
-    }
+    });
   </script>
+
 </body>
 </html>
