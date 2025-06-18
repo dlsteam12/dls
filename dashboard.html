@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>User Match Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     .swal2-timer-progress-bar { background: #facc15 !important; }
@@ -319,16 +319,14 @@
           const participantSnap = await getDoc(participantRef);
           if (participantSnap.exists()) {
             found = true;
-            const participantData = participantSnap.data();
-            const teamName = participantData.teamName || "No Team Name";
-
+            const pData = participantSnap.data();
             const matchDate = matchData.dateTime?.toDate?.() || new Date(matchData.dateTime);
             const formattedDate = matchDate.toLocaleString().replace(/GMT.*/, "").trim();
             html += `
               <div class="bg-gray-800 border border-gray-600 p-4 rounded-md">
                 <h4 class="text-yellow-400 font-semibold text-lg">${matchData.title || "Untitled Match"}</h4>
-                <p class="text-gray-300 text-sm">Team Name: <span class="font-semibold text-white">${teamName}</span></p>
                 <p class="text-gray-300 text-sm">Date & Time: ${formattedDate}</p>
+                <p class="text-gray-300 text-sm">Your Team: <span class="font-bold text-yellow-400">${pData.teamName || "No Name"}</span></p>
                 <p class="text-gray-300 text-sm">Total Price: ৳${matchData.totalPrice || 'N/A'}</p>
                 <p class="text-gray-300 text-sm">Per Goal: ৳${matchData.perGoal != null ? matchData.perGoal : 'N/A'}</p>
                 <p class="text-gray-300 text-sm">Entry Fee: ৳${matchData.entryFee || 'N/A'}</p>
