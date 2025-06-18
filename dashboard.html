@@ -60,6 +60,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, getDoc, collection, getDocs, updateDoc, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
@@ -73,6 +74,8 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const storage = getStorage(app);
+
   let currentUser = null;
   let userBalance = 0;
 
@@ -124,40 +127,49 @@
 
         const countdownId = `countdown-${matchId}`;
 
+        // Added image icon with click handler calling showImageUpload(matchId)
         html += `
          <div class="bg-gray-900 p-4 rounded-md border border-gray-700 space-y-2">
-        <h4 class="text-yellow-400 font-semibold text-lg">${match.title || "Untitled Match"}</h4>
-        <p class="text-gray-300 text-sm">Date & Time: ${formattedDate}</p>
-        <p class="text-gray-300 text-sm">Total Price: ৳${match.totalPrice || 'N/A'}</p>
-        <p class="text-gray-300 text-sm">Per Goal: ৳${match.perGoal != null ? match.perGoal : 'N/A'}</p>
-        <p class="text-gray-300 text-sm">Entry Fee: ৳${match.entryFee || 'N/A'}</p>
+          <div class="flex items-center justify-between">
+            <h4 class="text-yellow-400 font-semibold text-lg flex items-center gap-2">
+              ${match.title || "Untitled Match"}
+              <i title="Upload Match Image" 
+                 onclick="showImageUpload('${matchId}')"
+                 class="fa-solid fa-image cursor-pointer text-yellow-300 hover:text-yellow-400 transition"
+                 style="font-size: 1.1rem;"></i>
+            </h4>
+          </div>
+          <p class="text-gray-300 text-sm">Date & Time: ${formattedDate}</p>
+          <p class="text-gray-300 text-sm">Total Price: ৳${match.totalPrice || 'N/A'}</p>
+          <p class="text-gray-300 text-sm">Per Goal: ৳${match.perGoal != null ? match.perGoal : 'N/A'}</p>
+          <p class="text-gray-300 text-sm">Entry Fee: ৳${match.entryFee || 'N/A'}</p>
 
-        <div class="flex items-center gap-4 mt-2">
-          <div class="flex-1">
-            <div class="bg-green-100 rounded-full h-2 overflow-hidden">
-              <div class="${progressColor} h-full transition-all duration-300" style="width: ${(fillRatio * 100).toFixed(1)}%"></div>
+          <div class="flex items-center gap-4 mt-2">
+            <div class="flex-1">
+              <div class="bg-green-100 rounded-full h-2 overflow-hidden">
+                <div class="${progressColor} h-full transition-all duration-300" style="width: ${(fillRatio * 100).toFixed(1)}%"></div>
+              </div>
+              <p class="text-sm text-gray-300 font-semibold mt-1">Slot: ${slot} / ${slotLimit}</p>
             </div>
-            <p class="text-sm text-gray-300 font-semibold mt-1">Slot: ${slot} / ${slotLimit}</p>
+
+            <div class="flex items-center h-full">
+              ${
+                isFull
+                  ? `<button disabled class="bg-gray-700 text-white font-semibold py-1.5 px-4 rounded cursor-not-allowed whitespace-nowrap">Match Full</button>`
+                  : `<button onclick="showTeamInput('${matchId}', ${slot}, ${slotLimit}, ${match.entryFee || 0})" class="bg-yellow-400 text-black font-semibold py-1.5 px-4 rounded hover:bg-yellow-300 transition whitespace-nowrap">Join</button>`
+              }
+            </div>
           </div>
 
-          <div class="flex items-center h-full">
-            ${
-              isFull
-                ? `<button disabled class="bg-gray-700 text-white font-semibold py-1.5 px-4 rounded cursor-not-allowed whitespace-nowrap">Match Full</button>`
-                : `<button onclick="showTeamInput('${matchId}', ${slot}, ${slotLimit}, ${match.entryFee || 0})" class="bg-yellow-400 text-black font-semibold py-1.5 px-4 rounded hover:bg-yellow-300 transition whitespace-nowrap">Join</button>`
-            }
+          <div class="mt-2 flex gap-2">
+            <button onclick="showParticipants('${matchId}')" class="flex-1 bg-purple-700 hover:bg-purple-600 text-white font-semibold py-1.5 rounded transition">Participants</button>
+            <button onclick="showMatchCode('${matchId}', '${match.matchCode || 'N/A'}')" class="flex-1 bg-indigo-700 hover:bg-indigo-600 text-white font-semibold py-1.5 rounded transition">Match Code</button>
+          </div>
+
+          <div class="mt-2 text-center text-sm text-gray-300 font-semibold">
+            Starts in: <span id="${countdownId}" class="text-yellow-400">Calculating...</span>
           </div>
         </div>
-
-        <div class="mt-2 flex gap-2">
-          <button onclick="showParticipants('${matchId}')" class="flex-1 bg-purple-700 hover:bg-purple-600 text-white font-semibold py-1.5 rounded transition">Participants</button>
-          <button onclick="showMatchCode('${matchId}', '${match.matchCode || 'N/A'}')" class="flex-1 bg-indigo-700 hover:bg-indigo-600 text-white font-semibold py-1.5 rounded transition">Match Code</button>
-        </div>
-
-        <div class="mt-2 text-center text-sm text-gray-300 font-semibold">
-          Starts in: <span id="${countdownId}" class="text-yellow-400">Calculating...</span>
-        </div>
-      </div>
         `;
 
         timers.push({ id: countdownId, time: matchDate });
@@ -322,11 +334,94 @@
     });
   };
 
+  // New function: show image upload popup
+  window.showImageUpload = async (matchId) => {
+    if (!currentUser) return;
+
+    const userId = currentUser.uid;
+    const participantRef = doc(db, "matches", matchId, "participants", userId);
+    const participantSnap = await getDoc(participantRef);
+
+    if (!participantSnap.exists()) {
+      Swal.fire("Access Denied", "You need to join the match to upload an image.", "warning");
+      return;
+    }
+
+    // Show Swal with file input
+    const { value: file } = await Swal.fire({
+      title: 'Upload Match Image',
+      input: 'file',
+      inputAttributes: {
+        accept: 'image/*',
+        'aria-label': 'Upload your match-related image'
+      },
+      confirmButtonText: 'Upload',
+      showCancelButton: true,
+      preConfirm: (file) => {
+        return new Promise((resolve, reject) => {
+          if (!file) {
+            reject("Please select an image file.");
+          } else if (!file.type.startsWith("image/")) {
+            reject("Only image files are allowed.");
+          } else {
+            resolve(file);
+          }
+        });
+      }
+    });
+
+    if (!file) return;
+
+    // Upload file to Firebase Storage
+    const storageRef = ref(storage, `matchImages/${matchId}/${userId}_${Date.now()}.${file.name.split('.').pop()}`);
+
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    Swal.fire({
+      title: 'Uploading...',
+      html: 'Please wait while your image is uploaded.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    uploadTask.on('state_changed', 
+      (snapshot) => {
+        // Optionally, update progress bar here if you want
+        // const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+      }, 
+      (error) => {
+        Swal.close();
+        console.error("Upload failed:", error);
+        Swal.fire("Error", "Image upload failed. Please try again.", "error");
+      }, 
+      async () => {
+        // Upload completed
+        Swal.close();
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+        // Optionally, save downloadURL to Firestore under participant doc
+        try {
+          await updateDoc(participantRef, {
+            uploadedImageURL: downloadURL,
+            uploadedAt: new Date()
+          });
+          Swal.fire("Uploaded!", "Your image has been uploaded successfully.", "success");
+        } catch(e) {
+          console.error("Saving image URL error:", e);
+          Swal.fire("Uploaded!", "Image uploaded but failed to save info.", "warning");
+        }
+      }
+    );
+  };
+
   window.logout = async function () {
     await signOut(auth);
     window.location.href = "login.html";
   };
 </script>
+
 
 </body>
 </html>
