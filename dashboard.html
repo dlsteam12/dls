@@ -97,7 +97,6 @@
   async function fetchMatches() {
     const matchListEl = document.getElementById("matchList");
     matchListEl.innerHTML = "Loading matches...";
-
     try {
       const querySnapshot = await getDocs(collection(db, "matches"));
       if (querySnapshot.empty) {
@@ -111,7 +110,6 @@
       querySnapshot.forEach(docSnap => {
         const match = docSnap.data();
         const matchId = docSnap.id;
-
         if (match.finished !== false) return;
 
         const matchDate = match.dateTime?.toDate?.() || new Date(match.dateTime);
@@ -119,19 +117,17 @@
         const slot = match.slot || 0;
         const slotLimit = match.slotLimit || 0;
         const isFull = slot >= slotLimit;
-
         const fillRatio = slotLimit === 0 ? 0 : slot / slotLimit;
         let progressColor = "bg-green-500";
         if (fillRatio >= 0.5) progressColor = "bg-yellow-400";
 
         const countdownId = `countdown-${matchId}`;
-
         html += `
-         <div class="bg-gray-900 p-4 rounded-md border border-gray-700 space-y-2">
+        <div class="bg-gray-900 p-4 rounded-md border border-gray-700 space-y-2">
           <div class="flex items-center justify-between">
             <h4 class="text-yellow-400 font-semibold text-lg flex items-center gap-2">
               ${match.title || "Untitled Match"}
-              <i title="Upload Match Image" 
+              <i title="Upload Match Image"
                  onclick="showImageUpload('${matchId}')"
                  class="fa-solid fa-image cursor-pointer text-yellow-300 hover:text-yellow-400 transition"
                  style="font-size: 1.1rem;"></i>
@@ -149,7 +145,6 @@
               </div>
               <p class="text-sm text-gray-300 font-semibold mt-1">Slot: ${slot} / ${slotLimit}</p>
             </div>
-
             <div class="flex items-center h-full">
               ${
                 isFull
@@ -158,18 +153,15 @@
               }
             </div>
           </div>
-
           <div class="mt-2 flex gap-2">
             <button onclick="showParticipants('${matchId}')" class="flex-1 bg-purple-700 hover:bg-purple-600 text-white font-semibold py-1.5 rounded">Participants</button>
             <button onclick="showMatchCode('${matchId}', '${match.matchCode || 'N/A'}')" class="flex-1 bg-indigo-700 hover:bg-indigo-600 text-white font-semibold py-1.5 rounded">Match Code</button>
           </div>
-
           <div class="mt-2 text-center text-sm text-gray-300 font-semibold">
             Starts in: <span id="${countdownId}" class="text-yellow-400">Calculating...</span>
           </div>
         </div>
         `;
-
         timers.push({ id: countdownId, time: matchDate });
       });
 
@@ -182,149 +174,23 @@
   }
 
   function startCountdowns(timers) {
-    function update() {
+    setInterval(() => {
       const now = new Date().getTime();
       timers.forEach(timer => {
-        const distance = new Date(timer.time).getTime() - now;
         const el = document.getElementById(timer.id);
         if (!el) return;
-
+        const distance = new Date(timer.time).getTime() - now;
         if (distance <= 0) {
           el.innerText = "Started";
-          return;
+        } else {
+          const h = Math.floor((distance / (1000 * 60 * 60)) % 24);
+          const m = Math.floor((distance / (1000 * 60)) % 60);
+          const s = Math.floor((distance / 1000) % 60);
+          el.innerText = `${h}h ${m}m ${s}s`;
         }
-
-        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-        el.innerText = `${hours}h ${minutes}m ${seconds}s`;
       });
-    }
-    update();
-    setInterval(update, 1000);
+    }, 1000);
   }
-
-  window.showTeamInput = async (matchId, currentSlot, slotLimit, entryFee) => {
-    if (!currentUser) return;
-
-    const userId = currentUser.uid;
-    const participantRef = doc(db, "matches", matchId, "participants", userId);
-    const participantSnap = await getDoc(participantRef);
-
-    if (participantSnap.exists()) {
-      Swal.fire("Already Joined", "You have already joined this match.", "info");
-      return;
-    }
-
-    const { value: teamName } = await Swal.fire({
-      title: "Enter Team Name",
-      input: "text",
-      inputLabel: "Team Name",
-      inputPlaceholder: "Type your team name here",
-      confirmButtonText: "Join Match",
-      showCancelButton: true,
-      inputValidator: (value) => {
-        if (!value) return "Team name is required!";
-      }
-    });
-
-    if (teamName) {
-      joinMatch(matchId, currentSlot, slotLimit, entryFee, teamName);
-    }
-  };
-
-  async function joinMatch(matchId, currentSlot, slotLimit, entryFee, teamName) {
-    if (!currentUser) return;
-
-    const userId = currentUser.uid;
-    const participantRef = doc(db, "matches", matchId, "participants", userId);
-
-    if (currentSlot >= slotLimit) {
-      Swal.fire("Slot Full", "Sorry, this match is already full.", "warning");
-      return;
-    }
-
-    if (userBalance < entryFee) {
-      Swal.fire("Insufficient Balance", "You don't have enough balance to join this match.", "error");
-      return;
-    }
-
-    try {
-      await updateDoc(doc(db, "users", userId), {
-        balance: userBalance - entryFee
-      });
-
-      await setDoc(participantRef, {
-        joinedAt: new Date(),
-        uid: userId,
-        teamName: teamName
-      });
-
-      await updateDoc(doc(db, "matches", matchId), {
-        slot: increment(1)
-      });
-
-      userBalance -= entryFee;
-      document.getElementById("mainBalance").innerText = `৳${userBalance.toFixed(2)}`;
-
-      Swal.fire("Joined!", "You have successfully joined the match.", "success");
-      fetchMatches();
-    } catch (error) {
-      console.error("Join match error:", error);
-      Swal.fire("Error", "Failed to join the match.", "error");
-    }
-  }
-
-  window.showParticipants = async (matchId) => {
-    try {
-      const participantsCol = collection(db, "matches", matchId, "participants");
-      const participantsSnapshot = await getDocs(participantsCol);
-
-      if (participantsSnapshot.empty) {
-        Swal.fire("No Participants", "No participants have joined this match yet.", "info");
-        return;
-      }
-
-      let participantsList = "";
-      participantsSnapshot.forEach(docSnap => {
-        const p = docSnap.data();
-        participantsList += `<li class="mb-1 font-semibold">
-          ${p.teamName || "No Name"}<br>
-          <span class="text-sm text-gray-400">UID: ${p.uid}</span>
-        </li>`;
-      });
-
-      Swal.fire({
-        title: `Participants (${participantsSnapshot.size})`,
-        html: `<ul class="text-left max-h-60 overflow-auto">${participantsList}</ul>`,
-        width: 400,
-        confirmButtonText: "Close"
-      });
-    } catch (error) {
-      console.error("Error fetching participants:", error);
-      Swal.fire("Error", "Could not load participants.", "error");
-    }
-  };
-
-  window.showMatchCode = async (matchId, matchCode) => {
-    if (!currentUser) return;
-
-    const userId = currentUser.uid;
-    const participantRef = doc(db, "matches", matchId, "participants", userId);
-    const participantSnap = await getDoc(participantRef);
-
-    if (!participantSnap.exists()) {
-      Swal.fire("Access Denied", "You need to join the match to see the match code.", "warning");
-      return;
-    }
-
-    Swal.fire({
-      title: `Match Code`,
-      html: `<p class="text-yellow-400 font-bold text-lg">${matchCode}</p>`,
-      icon: "info",
-      confirmButtonText: "Close"
-    });
-  };
 
   window.showImageUpload = async (matchId) => {
     if (!currentUser) return;
@@ -358,10 +224,7 @@
 
     if (!file) return;
 
-    const ext = file.name.split('.').pop();
-    const storageRef = ref(storage, `matchImages/${matchId}/${userId}_${Date.now()}.${ext}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
+    // SHOW LOADING ONLY AFTER FILE SELECTED
     Swal.fire({
       title: 'Uploading...',
       html: 'Please wait while your image is uploaded.',
@@ -369,29 +232,26 @@
       didOpen: () => Swal.showLoading()
     });
 
-    uploadTask.on('state_changed', 
+    const ext = file.name.split('.').pop();
+    const storageRef = ref(storage, `matchImages/${matchId}/${userId}_${Date.now()}.${ext}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on('state_changed',
       (snapshot) => {
         const progress = Math.floor((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
         Swal.getHtmlContainer().innerHTML = `Uploading... <b>${progress}%</b>`;
-      }, 
+      },
       (error) => {
-        Swal.close();
-        console.error("Upload failed:", error);
-        Swal.fire("Error", "Image upload failed. Please try again.", "error");
-      }, 
+        console.error("Upload error:", error);
+        Swal.fire("Error", "Failed to upload image.", "error");
+      },
       async () => {
-        Swal.close();
         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        try {
-          await updateDoc(participantRef, {
-            uploadedImageURL: downloadURL,
-            uploadedAt: new Date()
-          });
-          Swal.fire("Uploaded!", "Your image has been uploaded successfully.", "success");
-        } catch(e) {
-          console.error("Saving image URL error:", e);
-          Swal.fire("Uploaded!", "Image uploaded but failed to save info.", "warning");
-        }
+        await updateDoc(participantRef, {
+          uploadedImageURL: downloadURL,
+          uploadedAt: new Date()
+        });
+        Swal.fire("Uploaded!", "Your image has been uploaded successfully.", "success");
       }
     );
   };
