@@ -76,6 +76,7 @@
             const matchDate = matchData.dateTime?.toDate?.() || new Date(matchData.dateTime);
             const formattedDate = matchDate.toLocaleString().replace(/GMT.*/, "").trim();
 
+            // Get participants list
             const participantsCol = collection(db, "matches", matchId, "participants");
             const participantsSnapshot = await getDocs(participantsCol);
             let participantsHtml = "<ul class='list-disc list-inside max-h-40 overflow-auto text-gray-300'>";
@@ -85,28 +86,11 @@
             });
             participantsHtml += "</ul>";
 
+            // Screenshot URL value for this participant
             const currentScreenshot = pData.screenshotUrl || "";
-            const screenshotSection = currentScreenshot
-              ? `<p class="mt-2 text-green-400 font-semibold">✅ Screenshot URL already uploaded.</p>`
-              : `
-                <div class="mt-4" id="screenshot-section-${matchId}">
-                  <label for="screenshot-${matchId}" class="block text-gray-300 mb-1">Upload Match Screenshot URL:</label>
-                  <input
-                    type="url"
-                    id="screenshot-${matchId}"
-                    placeholder="Enter screenshot URL"
-                    class="w-full px-3 py-2 rounded bg-gray-900 text-white border border-gray-600 focus:outline-none focus:border-yellow-400"
-                  />
-                  <button
-                    onclick="uploadScreenshot('${matchId}')"
-                    class="mt-2 w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-2 rounded"
-                  >
-                    Upload Screenshot
-                  </button>
-                </div>`;
 
             html += `
-              <div class="w-full bg-gray-800 border border-gray-600 p-4 rounded-md">
+              <div class="bg-gray-800 border border-gray-600 p-4 rounded-md">
                 <h4 class="text-yellow-400 font-semibold text-lg">${matchData.title || "Untitled Match"}</h4>
                 <p class="text-gray-300 text-sm">Date & Time: ${formattedDate}</p>
                 <p class="text-gray-300 text-sm">Your Team: <span class="font-bold text-yellow-400">${pData.teamName || "No Name"}</span></p>
@@ -117,7 +101,23 @@
                   <h5 class="text-yellow-300 font-semibold">Participants:</h5>
                   ${participantsHtml}
                 </div>
-                ${screenshotSection}
+
+                <div id="screenshot-section" class="mt-4">
+                  <label for="screenshot-${matchId}" class="block text-gray-300 mb-1">Upload Match Screenshot URL:</label>
+                  <input
+                    type="url"
+                    id="screenshot-${matchId}"
+                    placeholder="Enter screenshot URL"
+                    class="w-full px-3 py-2 rounded bg-gray-900 text-white border border-gray-600 focus:outline-none focus:border-yellow-400"
+                    value="${currentScreenshot}"
+                  />
+                  <button
+                    onclick="uploadScreenshot('${matchId}')"
+                    class="mt-2 w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-2 rounded"
+                  >
+                    Upload Screenshot
+                  </button>
+                </div>
               </div>
             `;
           }
@@ -156,12 +156,6 @@
           timer: 2000,
           showConfirmButton: false,
         });
-
-        // ✅ Hide input section and show success message
-        const section = document.getElementById(`screenshot-section-${matchId}`);
-        if (section) {
-          section.innerHTML = `<p class="mt-2 text-green-400 font-semibold">✅ Screenshot URL uploaded successfully.</p>`;
-        }
       } catch (error) {
         console.error("Error uploading screenshot URL:", error);
         Swal.fire({
