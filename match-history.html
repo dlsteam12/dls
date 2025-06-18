@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Match History & Upload</title>
+  <title>Match History</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap" rel="stylesheet" />
@@ -24,26 +24,16 @@
       <i class="fa-solid fa-headset font-bold text-1xl"></i>
     </div>
   </header>
-  <a href="dashboard.html" class="text-yellow-400 underline hover:text-yellow-300 mx-auto mb-4">Back To Dashboard</a>
+  <a href="dashboard.html" class="text-yellow-400 underline hover:text-yellow-300 mx-auto mb-4 block max-w-md">Back To Dashboard</a>
 
   <main id="matchHistory" class="space-y-6 px-3 max-w-md mx-auto w-full">
-
-    <p class="text-gray-400">Loading your match history...</p>
-
-    <!-- Upload Section -->
-    <section class="mt-8 p-4 bg-gray-900 rounded-md border border-gray-700">
-      <h3 class="text-yellow-400 font-semibold mb-2">Upload Match Screenshot</h3>
-      <input type="file" id="fileInput" accept="image/*" class="mb-3 w-full text-black rounded px-2 py-1" />
-      <button id="uploadBtn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-4 py-2 rounded disabled:opacity-50" disabled>Upload Screenshot</button>
-    </section>
-
+    <p class="text-gray-400 text-center">Loading your match history...</p>
   </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDooTNeDHoWUU9nLxYxyBIhewydt7Xl_M0",
@@ -57,50 +47,56 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const storage = getStorage(app);
-
     let currentUser = null;
 
-    // UI elements
-    const matchHistoryEl = document.getElementById("matchHistory");
-    const fileInput = document.getElementById("fileInput");
-    const uploadBtn = document.getElementById("uploadBtn");
-
     onAuthStateChanged(auth, async (user) => {
-      if (!user) return window.location.href = "login.html";
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
       currentUser = user;
-      uploadBtn.disabled = true; // disable upload btn till file select
-      fetchMatchHistory();
+      await fetchMatchHistory();
     });
 
-    // Fetch and show match history
     async function fetchMatchHistory() {
-      matchHistoryEl.innerHTML = "<p class='text-gray-400'>Loading your match history...</p>";
+      const matchHistoryEl = document.getElementById("matchHistory");
+      matchHistoryEl.innerHTML = `<p class="text-gray-400 text-center">Loading your match history...</p>`;
       try {
+        // get all matches collection docs
         const matchesSnapshot = await getDocs(collection(db, "matches"));
         let html = "";
         let found = false;
 
-        for (const docSnap of matchesSnapshot.docs) {
-          const matchId = docSnap.id;
-          const matchData = docSnap.data();
+        for (const matchDoc of matchesSnapshot.docs) {
+          const matchId = matchDoc.id;
+          const matchData = matchDoc.data();
 
-          const participantRef = doc(db, "matches", matchId, "participants", currentUser.uid);
-          const participantSnap = await getDoc(participantRef);
+          // Check if current user is a participant in this match
+          const participantDocRef = doc(db, "matches", matchId, "participants", currentUser.uid);
+          const participantDocSnap = await getDoc(participantDocRef);
 
-          if (participantSnap.exists()) {
+          if (participantDocSnap.exists()) {
             found = true;
-            const pData = participantSnap.data();
-            const matchDate = matchData.dateTime?.toDate?.() || new Date(matchData.dateTime);
+            const pData = participantDocSnap.data();
+
+            // Convert Firestore timestamp to JS Date if possible
+            let matchDate = null;
+            if (matchData.dateTime && typeof matchData.dateTime.toDate === "function") {
+              matchDate = matchData.dateTime.toDate();
+            } else if (matchData.dateTime) {
+              matchDate = new Date(matchData.dateTime);
+            } else {
+              matchDate = new Date();
+            }
             const formattedDate = matchDate.toLocaleString().replace(/GMT.*/, "").trim();
 
-            // Get participants list
-            const participantsCol = collection(db, "matches", matchId, "participants");
-            const participantsSnapshot = await getDocs(participantsCol);
+            // Fetch participants of this match for display
+            const participantsColRef = collection(db, "matches", matchId, "participants");
+            const participantsSnapshot = await getDocs(participantsColRef);
             let participantsHtml = "<ul class='list-disc list-inside max-h-40 overflow-auto text-gray-300'>";
-            participantsSnapshot.forEach(docSnap => {
-              const participant = docSnap.data();
-              participantsHtml += `<li>${participant.teamName || "No Name"}</li>`;
+            participantsSnapshot.forEach(pSnap => {
+              const pdata = pSnap.data();
+              participantsHtml += `<li>${pdata.teamName || "No Name"}</li>`;
             });
             participantsHtml += "</ul>";
 
@@ -109,9 +105,9 @@
                 <h4 class="text-yellow-400 font-semibold text-lg">${matchData.title || "Untitled Match"}</h4>
                 <p class="text-gray-300 text-sm">Date & Time: ${formattedDate}</p>
                 <p class="text-gray-300 text-sm">Your Team: <span class="font-bold text-yellow-400">${pData.teamName || "No Name"}</span></p>
-                <p class="text-gray-300 text-sm">Total Prize: ৳${matchData.totalPrice || 'N/A'}</p>
+                <p class="text-gray-300 text-sm">Total Prize: ৳${matchData.totalPrice ?? 'N/A'}</p>
                 <p class="text-gray-300 text-sm">Per Goal: ৳${matchData.perGoal != null ? matchData.perGoal : 'N/A'}</p>
-                <p class="text-gray-300 text-sm">Entry Fee: ৳${matchData.entryFee || 'N/A'}</p>
+                <p class="text-gray-300 text-sm">Entry Fee: ৳${matchData.entryFee ?? 'N/A'}</p>
                 <div class="mt-2">
                   <h5 class="text-yellow-300 font-semibold">Participants:</h5>
                   ${participantsHtml}
@@ -121,47 +117,16 @@
           }
         }
 
-        matchHistoryEl.innerHTML = found
-          ? html
-          : `<p class="text-gray-400">You haven't joined any matches yet.</p>`;
+        if (!found) {
+          html = `<p class="text-gray-400 text-center">You haven't joined any matches yet.</p>`;
+        }
+        matchHistoryEl.innerHTML = html;
+
       } catch (error) {
         console.error("Error fetching match history:", error);
-        matchHistoryEl.innerHTML = "<p class='text-red-500'>Failed to load match history.</p>";
+        matchHistoryEl.innerHTML = `<p class='text-red-500 text-center'>Failed to load match history.</p>`;
       }
     }
-
-    // Enable upload button only when a file is selected
-    fileInput.addEventListener("change", () => {
-      uploadBtn.disabled = !fileInput.files.length;
-    });
-
-    // Upload function
-    uploadBtn.addEventListener("click", async () => {
-      const file = fileInput.files[0];
-      if (!file) {
-        Swal.fire("Error", "Please select a file first.", "error");
-        return;
-      }
-
-      const storageRef = ref(storage, `match_screenshots/${currentUser.uid}/${Date.now()}_${file.name}`);
-
-      try {
-        uploadBtn.disabled = true;
-        uploadBtn.textContent = "Uploading...";
-
-        await uploadBytes(storageRef, file);
-
-        Swal.fire("Success", "Screenshot uploaded successfully!", "success");
-        fileInput.value = "";
-      } catch (error) {
-        console.error("Upload error:", error);
-        Swal.fire("Error", "Upload failed: " + error.message, "error");
-      } finally {
-        uploadBtn.disabled = false;
-        uploadBtn.textContent = "Upload Screenshot";
-      }
-    });
-
   </script>
 </body>
 </html>
