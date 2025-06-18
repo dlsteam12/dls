@@ -86,7 +86,6 @@
             participantsHtml += "</ul>";
 
             const currentScreenshot = pData.screenshotUrl || "";
-            const isUploaded = currentScreenshot !== "";
 
             html += `
               <div class="bg-gray-800 border border-gray-600 p-4 rounded-md">
@@ -101,22 +100,25 @@
                   ${participantsHtml}
                 </div>
 
-                <div class="mt-4" id="screenshot-section-${matchId}" ${isUploaded ? 'style="display:none;"' : ''}>
-                  <label for="screenshot-${matchId}" class="block text-gray-300 mb-1">Upload Match Screenshot URL:</label>
-                  <input
-                    type="url"
-                    id="screenshot-${matchId}"
-                    placeholder="Enter screenshot URL"
-                    class="w-full px-3 py-2 rounded bg-gray-900 text-white border border-gray-600 focus:outline-none focus:border-yellow-400"
-                    value="${currentScreenshot}"
-                  />
-                  <button
-                    onclick="uploadScreenshot('${matchId}')"
-                    class="mt-2 w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-2 rounded"
-                  >
-                    Upload Screenshot
-                  </button>
-                </div>
+                ${currentScreenshot ? `
+                  <p class="text-green-400 mt-4">Screenshot already uploaded.</p>
+                ` : `
+                  <div class="mt-4" id="screenshot-section-${matchId}">
+                    <label for="screenshot-${matchId}" class="block text-gray-300 mb-1">Upload Match Screenshot URL:</label>
+                    <input
+                      type="url"
+                      id="screenshot-${matchId}"
+                      placeholder="Enter screenshot URL"
+                      class="w-full px-3 py-2 rounded bg-gray-900 text-white border border-gray-600 focus:outline-none focus:border-yellow-400"
+                    />
+                    <button
+                      onclick="uploadScreenshot('${matchId}')"
+                      class="mt-2 w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-2 rounded"
+                    >
+                      Upload Screenshot
+                    </button>
+                  </div>
+                `}
               </div>
             `;
           }
@@ -148,6 +150,8 @@
         const participantRef = doc(db, "matches", matchId, "participants", currentUser.uid);
         await updateDoc(participantRef, { screenshotUrl: url });
 
+        document.getElementById(`screenshot-section-${matchId}`).innerHTML = `<p class="text-green-400">Screenshot uploaded successfully.</p>`;
+
         Swal.fire({
           icon: 'success',
           title: 'Uploaded',
@@ -155,11 +159,6 @@
           timer: 2000,
           showConfirmButton: false,
         });
-
-        // Hide the section after successful upload
-        const section = document.getElementById(`screenshot-section-${matchId}`);
-        if (section) section.style.display = "none";
-
       } catch (error) {
         console.error("Error uploading screenshot URL:", error);
         Swal.fire({
@@ -168,7 +167,7 @@
           text: 'Failed to upload screenshot URL. Please try again.',
         });
       }
-    }
+    };
   </script>
 </body>
 </html>
